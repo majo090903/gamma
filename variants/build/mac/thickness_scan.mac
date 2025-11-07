@@ -1,0 +1,160 @@
+/control/macroPath mac
+
+# Master macro for non-interactive scans across world sizes, foil thicknesses,
+# and the combined tungsten energy grid.
+
+/control/execute init.mac
+
+# Use a fixed seed so every thickness starts from the same RNG state
+/random/setSeeds 123456 789012
+
+# Default number of primaries per (energy, thickness) unless overridden
+/control/alias nPrimaries 200000
+
+# Energy lists executed via helper macros (see energy_full.mac / energy_high.mac)
+
+# -----------------------------------------------------------------------------
+# World half-length: 50 cm
+# -----------------------------------------------------------------------------
+
+/det/setWorldHalf 50 cm
+/run/reinitializeGeometry
+
+# 100 nm
+/random/setSeeds 123456 789012
+/det/setWThickness 100 nm
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+# 150 nm
+/random/setSeeds 123456 789012
+/det/setWThickness 150 nm
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+# 250 nm
+/random/setSeeds 123456 789012
+/det/setWThickness 250 nm
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+# 500 nm
+/random/setSeeds 123456 789012
+/det/setWThickness 500 nm
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+# 1 µm
+/random/setSeeds 123456 789012
+/det/setWThickness 1 um
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+# 1.5 µm
+/random/setSeeds 123456 789012
+/det/setWThickness 1.5 um
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+# 2 µm
+/random/setSeeds 123456 789012
+/det/setWThickness 2 um
+/run/reinitializeGeometry
+/control/alias nPrimaries 100000
+/control/execute energy_full.mac
+
+# 5 µm (increase statistics for low transmission)
+/random/setSeeds 123456 789012
+/det/setWThickness 5 um
+/run/reinitializeGeometry
+/control/alias nPrimaries 1000000
+/control/execute energy_full.mac
+
+# Optional 10 µm block, high energies only
+/random/setSeeds 123456 789012
+/det/setWThickness 10 um
+/run/reinitializeGeometry
+/control/alias nPrimaries 1000000
+/control/execute energy_high.mac
+
+# Reset statistics for the next world size
+/control/alias nPrimaries 200000
+
+# -----------------------------------------------------------------------------
+# World half-length: 100 cm
+# -----------------------------------------------------------------------------
+
+/det/setWorldHalf 100 cm
+/run/reinitializeGeometry
+
+# 100 nm
+/random/setSeeds 123456 789012
+/det/setWThickness 100 nm
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+# 150 nm
+/random/setSeeds 123456 789012
+/det/setWThickness 150 nm
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+# 250 nm
+/random/setSeeds 123456 789012
+/det/setWThickness 250 nm
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+# 500 nm
+/random/setSeeds 123456 789012
+/det/setWThickness 500 nm
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+# 1 µm
+/random/setSeeds 123456 789012
+/det/setWThickness 1 um
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+# 1.5 µm
+/random/setSeeds 123456 789012
+/det/setWThickness 1.5 um
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+# 2 µm
+/random/setSeeds 123456 789012
+/det/setWThickness 2 um
+/run/reinitializeGeometry
+/control/alias nPrimaries 100000
+/control/execute energy_full.mac
+
+# 5 µm (higher statistics)
+/random/setSeeds 123456 789012
+/det/setWThickness 5 um
+/run/reinitializeGeometry
+/control/alias nPrimaries 1000000
+/control/execute energy_full.mac
+
+# Optional 10 µm block, high energies only
+/random/setSeeds 123456 789012
+/det/setWThickness 10 um
+/run/reinitializeGeometry
+/control/alias nPrimaries 1000000
+/control/execute energy_high.mac
+
+# Restore default statistics for any manual follow-up
+/control/alias nPrimaries 200000

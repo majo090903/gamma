@@ -1,0 +1,8 @@
+/home/majo/Geant4/lab/alpha/variants/build/CMakeFiles/attenuation.dir
+/home/majo/Geant4/lab/alpha/variants/build/CMakeFiles/atten.dir
+/home/majo/Geant4/lab/alpha/variants/build/CMakeFiles/edit_cache.dir
+/home/majo/Geant4/lab/alpha/variants/build/CMakeFiles/rebuild_cache.dir
+/home/majo/Geant4/lab/alpha/variants/build/CMakeFiles/list_install_components.dir
+/home/majo/Geant4/lab/alpha/variants/build/CMakeFiles/install.dir
+/home/majo/Geant4/lab/alpha/variants/build/CMakeFiles/install/local.dir
+/home/majo/Geant4/lab/alpha/variants/build/CMakeFiles/install/strip.dir

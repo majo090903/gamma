@@ -1,0 +1,20 @@
+/control/macroPath mac
+
+/control/execute init.mac
+
+/det/setWThickness 250 nm
+/run/reinitializeGeometry
+
+/control/alias nPrimaries 200000
+
+/control/alias E 60
+/control/execute e.mac
+
+/control/alias E 80
+/control/execute e.mac
+
+/control/alias E 500
+/control/execute e.mac
+
+/control/alias E 1000
+/control/execute e.mac

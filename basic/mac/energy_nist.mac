@@ -1,0 +1,102 @@
+/random/setSeeds 123456 789012
+
+/control/alias E 1
+/control/execute e.mac
+/control/alias E 1.5
+/control/execute e.mac
+/control/alias E 1.8092
+/control/execute e.mac
+/control/alias E 1.84014
+/control/execute e.mac
+/control/alias E 1.8716
+/control/execute e.mac
+/control/alias E 2
+/control/execute e.mac
+/control/alias E 2.281
+/control/execute e.mac
+/control/alias E 2.4235
+/control/execute e.mac
+/control/alias E 2.5749
+/control/execute e.mac
+/control/alias E 2.69447
+/control/execute e.mac
+/control/alias E 2.8196
+/control/execute e.mac
+/control/alias E 3
+/control/execute e.mac
+/control/alias E 4
+/control/execute e.mac
+/control/alias E 5
+/control/execute e.mac
+/control/alias E 6
+/control/execute e.mac
+/control/alias E 8
+/control/execute e.mac
+/control/alias E 10
+/control/execute e.mac
+/control/alias E 10.2068
+/control/execute e.mac
+/control/alias E 10.8548
+/control/execute e.mac
+/control/alias E 11.544
+/control/execute e.mac
+/control/alias E 11.8186
+/control/execute e.mac
+/control/alias E 12.0998
+/control/execute e.mac
+/control/alias E 15
+/control/execute e.mac
+/control/alias E 20
+/control/execute e.mac
+/control/alias E 30
+/control/execute e.mac
+/control/alias E 40
+/control/execute e.mac
+/control/alias E 50
+/control/execute e.mac
+/control/alias E 60
+/control/execute e.mac
+/control/alias E 69.525
+/control/execute e.mac
+/control/alias E 80
+/control/execute e.mac
+/control/alias E 100
+/control/execute e.mac
+/control/alias E 150
+/control/execute e.mac
+/control/alias E 200
+/control/execute e.mac
+/control/alias E 300
+/control/execute e.mac
+/control/alias E 400
+/control/execute e.mac
+/control/alias E 500
+/control/execute e.mac
+/control/alias E 600
+/control/execute e.mac
+/control/alias E 800
+/control/execute e.mac
+/control/alias E 1000
+/control/execute e.mac
+/control/alias E 1250
+/control/execute e.mac
+/control/alias E 1500
+/control/execute e.mac
+/control/alias E 2000
+/control/execute e.mac
+/control/alias E 3000
+/control/execute e.mac
+/control/alias E 4000
+/control/execute e.mac
+/control/alias E 5000
+/control/execute e.mac
+/control/alias E 6000
+/control/execute e.mac
+/control/alias E 8000
+/control/execute e.mac
+/control/alias E 10000
+/control/execute e.mac
+/control/alias E 15000
+/control/execute e.mac
+/control/alias E 20000
+/control/execute e.mac

@@ -1,0 +1,50 @@
+/random/setSeeds 123456 789012
+
+/control/alias E 500
+/control/execute e.mac
+/control/alias E 597.7
+/control/execute e.mac
+/control/alias E 631
+/control/execute e.mac
+/control/alias E 700
+/control/execute e.mac
+/control/alias E 762.9
+/control/execute e.mac
+/control/alias E 973.3
+/control/execute e.mac
+/control/alias E 1000
+/control/execute e.mac
+/control/alias E 1241
+/control/execute e.mac
+/control/alias E 1500
+/control/execute e.mac
+/control/alias E 1580
+/control/execute e.mac
+/control/alias E 1584
+/control/execute e.mac
+/control/alias E 2000
+/control/execute e.mac
+/control/alias E 2510
+/control/execute e.mac
+/control/alias E 3160
+/control/execute e.mac
+/control/alias E 3980
+/control/execute e.mac
+/control/alias E 5000
+/control/execute e.mac
+/control/alias E 6310
+/control/execute e.mac
+/control/alias E 7000
+/control/execute e.mac
+/control/alias E 10000
+/control/execute e.mac
+/control/alias E 15800
+/control/execute e.mac
+/control/alias E 25100
+/control/execute e.mac
+/control/alias E 39800
+/control/execute e.mac
+/control/alias E 63100
+/control/execute e.mac
+/control/alias E 100000
+/control/execute e.mac

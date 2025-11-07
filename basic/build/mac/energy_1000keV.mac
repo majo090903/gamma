@@ -1,0 +1,16 @@
+/control/execute init.mac
+
+/det/setWorldHalf 50 cm
+/det/setWThickness 1 um
+/run/reinitializeGeometry
+
+/control/alias nPrimaries 100000
+
+/gps/particle gamma
+/gps/ene/mono 1000 keV
+/gps/direction 0 0 1
+/gps/pos/type Plane
+/gps/pos/shape Circle
+/gps/pos/radius 0.5 mm
+/gps/pos/centre 0 0 -25 cm
+/run/beamOn {nPrimaries}

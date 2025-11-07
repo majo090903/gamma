@@ -1,0 +1,27 @@
+
+/control/verbose 2
+/run/verbose 2
+
+/random/setSeeds 123456 789012
+
+/det/setWorldHalf 100 cm
+/det/setWThickness 250 nm
+/run/reinitializeGeometry
+
+/run/initialize
+
+/control/alias nPrimaries 100000
+
+/gps/particle gamma
+/gps/ene/mono 356.5 keV
+/gps/ang/type beam1d
+/gps/direction 0 0 1
+/gps/pos/type Plane
+/gps/pos/shape Circle
+/gps/pos/radius 0.5 mm
+/gps/pos/centre 0 0 -25 cm
+
+/random/setSavingFlag 1
+/random/saveThisRun
+/random/resetEngineFrom currentEvent.rndm
+/run/beamOn {nPrimaries}

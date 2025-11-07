@@ -1,0 +1,134 @@
+/random/setSeeds 123456 789012
+
+/control/alias E 1
+/control/execute e.mac
+/control/alias E 1.58
+/control/execute e.mac
+/control/alias E 2.51
+/control/execute e.mac
+/control/alias E 3.98
+/control/execute e.mac
+/control/alias E 6.31
+/control/execute e.mac
+/control/alias E 10
+/control/execute e.mac
+/control/alias E 15.8
+/control/execute e.mac
+/control/alias E 20
+/control/execute e.mac
+/control/alias E 25.1
+/control/execute e.mac
+/control/alias E 25.5
+/control/execute e.mac
+/control/alias E 30
+/control/execute e.mac
+/control/alias E 32.4
+/control/execute e.mac
+/control/alias E 39.8
+/control/execute e.mac
+/control/alias E 40
+/control/execute e.mac
+/control/alias E 41.4
+/control/execute e.mac
+/control/alias E 50
+/control/execute e.mac
+/control/alias E 52.8
+/control/execute e.mac
+/control/alias E 60
+/control/execute e.mac
+/control/alias E 63.1
+/control/execute e.mac
+/control/alias E 65
+/control/execute e.mac
+/control/alias E 67.2
+/control/execute e.mac
+/control/alias E 68
+/control/execute e.mac
+/control/alias E 69
+/control/execute e.mac
+/control/alias E 70
+/control/execute e.mac
+/control/alias E 72
+/control/execute e.mac
+/control/alias E 75
+/control/execute e.mac
+/control/alias E 80
+/control/execute e.mac
+/control/alias E 85.7
+/control/execute e.mac
+/control/alias E 100
+/control/execute e.mac
+/control/alias E 109.2
+/control/execute e.mac
+/control/alias E 139.2
+/control/execute e.mac
+/control/alias E 150
+/control/execute e.mac
+/control/alias E 158
+/control/execute e.mac
+/control/alias E 177.5
+/control/execute e.mac
+/control/alias E 200
+/control/execute e.mac
+/control/alias E 226.2
+/control/execute e.mac
+/control/alias E 251
+/control/execute e.mac
+/control/alias E 288.3
+/control/execute e.mac
+/control/alias E 300
+/control/execute e.mac
+/control/alias E 367.7
+/control/execute e.mac
+/control/alias E 398
+/control/execute e.mac
+/control/alias E 468.7
+/control/execute e.mac
+/control/alias E 500
+/control/execute e.mac
+/control/alias E 597.7
+/control/execute e.mac
+/control/alias E 631
+/control/execute e.mac
+/control/alias E 700
+/control/execute e.mac
+/control/alias E 762.9
+/control/execute e.mac
+/control/alias E 973.3
+/control/execute e.mac
+/control/alias E 1000
+/control/execute e.mac
+/control/alias E 1241
+/control/execute e.mac
+/control/alias E 1500
+/control/execute e.mac
+/control/alias E 1580
+/control/execute e.mac
+/control/alias E 1584
+/control/execute e.mac
+/control/alias E 2000
+/control/execute e.mac
+/control/alias E 2510
+/control/execute e.mac
+/control/alias E 3160
+/control/execute e.mac
+/control/alias E 3980
+/control/execute e.mac
+/control/alias E 5000
+/control/execute e.mac
+/control/alias E 6310
+/control/execute e.mac
+/control/alias E 7000
+/control/execute e.mac
+/control/alias E 10000
+/control/execute e.mac
+/control/alias E 15800
+/control/execute e.mac
+/control/alias E 25100
+/control/execute e.mac
+/control/alias E 39800
+/control/execute e.mac
+/control/alias E 63100
+/control/execute e.mac
+/control/alias E 100000
+/control/execute e.mac

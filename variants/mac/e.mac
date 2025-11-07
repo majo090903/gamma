@@ -1,0 +1,15 @@
+/control/alias nPrimaries 200000
+
+/gps/particle gamma
+/gps/ene/mono {E} keV
+
+# Collimated beam along +z from a plane 25 cm upstream
+/gps/ang/type beam1d
+/gps/direction 0 0 1
+/gps/pos/type Plane
+/gps/pos/shape Circle
+/gps/pos/radius 0.5 mm
+/gps/pos/centre 0 0 -25 cm
+
+# Number of primaries controlled by /control/alias nPrimaries (defaults set in macros)
+/run/beamOn {nPrimaries}

@@ -1,0 +1,29 @@
+/control/macroPath mac
+
+/control/execute init.mac
+
+/control/alias nPrimaries 200000
+
+/control/alias E 60
+/det/setBackingThickness {backingThickness_um} um
+/det/setWThickness 200 nm
+/run/reinitializeGeometry
+/control/execute e.mac
+
+/control/alias E 80
+/det/setBackingThickness {backingThickness_um} um
+/det/setWThickness 300 nm
+/run/reinitializeGeometry
+/control/execute e.mac
+
+/control/alias E 500
+/det/setBackingThickness {backingThickness_um} um
+/det/setWThickness 250 um
+/run/reinitializeGeometry
+/control/execute e.mac
+
+/control/alias E 1000
+/det/setBackingThickness {backingThickness_um} um
+/det/setWThickness 750 um
+/run/reinitializeGeometry
+/control/execute e.mac

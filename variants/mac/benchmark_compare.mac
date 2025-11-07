@@ -1,0 +1,9 @@
+/control/macroPath mac
+
+# Foil-only benchmark pass (backing disabled)
+/control/alias backingThickness_um 0
+/control/execute benchmark_core.mac
+
+# Backed benchmark pass (default 50 µm tungsten backing)
+/control/alias backingThickness_um 50
+/control/execute benchmark_core.mac
