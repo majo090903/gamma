@@ -1,4 +1,4 @@
-# Alpha: Tungsten Gamma Attenuation Benchmarks
+# Tungsten Gamma Attenuation Benchmarks
 
 *(English follows the Korean summary.)*
 
