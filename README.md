@@ -57,5 +57,4 @@ The `plot_coefficients.py` scripts include the same improvements in both trees: 
 
 ## Quick Answers
 - **Do the plots overlay NIST data?** Yes. The updated `plot_coefficients.py` in both trees plots simulation curves and scatters both simulation and NIST points, plus a residual subplot for percentage deltas.
-- **Where do I edit the formulas?** Both READMEs now have bilingual equation sections and a “formula glossary” table; update those if the calculation pipeline changes.
-- **What if I don’t need the variants build?** You can work inside `basic/` only, but keep `variants/` committed so teammates who rely on the backing comparisons can continue using it.
+- **Where do I edit the formulas?** Both READMEs now have bilingual equation sections and a “formula glossary” table.
