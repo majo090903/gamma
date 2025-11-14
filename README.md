@@ -28,6 +28,8 @@ This repository tracks two closely related Geant4 applications that estimate tun
 | `basic/` | Minimal “bare foil” benchmark | Single tungsten foil in vacuum | Deterministic seeds, CPE-adjusted μ<sub>en</sub>/ρ, plotting/report scripts |
 | `variants/` | Extended benchmark with downstream backing control | Foil plus optional tungsten backing plate | `/det/setBackingThickness` UI command, foil-only vs backed macros, extra CSV column |
 
+> 다음 내용은 `variants/README.md`에서 더욱 상세하게 설명됩니다. 발표/분석용 산출물(플롯, 최적 두께 표 등)을 찾아야 할 경우 `variants/` 문서를 먼저 참조하세요.
+
 Both share the same HybridEmPhysics (Option4) list, diagnostic logging, CSV schema, and plotting utilities; only the geometry and macros differ. The rest of this document summarizes the layout for teammates and future Git history.
 
 ---

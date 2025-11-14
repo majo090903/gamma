@@ -134,6 +134,27 @@ variants 빌드는 기본 라인을 확장해 박막 뒤에 텅스텐 백킹(bac
 - `nist_scan.mac` : 세계 50 cm/100 cm × 두께 10종(100 nm–10 µm) × NIST 참조 에너지 50개 = **1000** 런. `energy_nist.mac`이 `nist_reference.csv`의 50 에너지와 완전히 일치하도록 구성되어 있습니다.
 - 총합 약 **2550** 런의 샘플이 `transmission_summary.csv`에 누적되며, 이후 모든 플롯/오버레이는 이 CSV를 기반으로 생성됩니다.
 
+### 복합 최적 두께 오버레이 생성 절차
+1. Geant4 단계  
+   `thickness_scan.mac`(백킹 포함)과 `thickness_scan_foil.mac`(백킹 0 µm)을 함께 돌려 전체 에너지 격자(1–100 MeV)를 커버합니다. 각 조합은 200k primaries(일부 두꺼운 포일은 1M)로 실행되어 통계적 노이즈를 줄였습니다.
+2. 데이터 집계  
+   두 매크로에서 생성된 CSV는 하나의 `transmission_summary.csv`에 누적됩니다. 이 파일에는 포일 두께, 백킹 두께, 월드 크기, 투과 통계, 에너지 흡수 계수, NIST 참조 값이 모두 기록됩니다.
+3. 스코어 계산  
+   `scripts/overlay_best_thickness.py`가 에너지별로 모든 조합을 읽어  
+   \[
+   \text{score}(E,t)=w_{\mu}\,|\Delta\mu|+w_{\mu_{\mathrm{en}}}\,|\Delta\mu_{\mathrm{en}}|
+   \]
+   을 계산한 뒤 score가 가장 낮은 조합만 남깁니다. 이 조합의 μ/ρ와 μ_en/ρ를 `overlay_best_thickness.csv`와 `overlay_best_thickness.png`에 기록합니다.
+4. 후처리  
+   `scripts/optimize_thickness.py`는 같은 정보를 `optimized_thicknesses.csv`와 `mac/benchmark_auto.mac`으로 변환해 에너지별 최적 두께/백킹을 재실행할 수 있게 합니다.  
+   `scripts/rank_thickness_accuracy.py`는 전 에너지 범위에서 RMS |Δμ|, |Δμ_en|이 가장 작은 Foil-only/백킹 조합을 찾아 `best_thickness_configs.csv`와 `plots_variants/best/`에 플롯·오차 CSV를 복사합니다.
+5. 물리적 해석  
+   오버레이의 원(●)은 Foil-only(백킹 없음), 사각형(□)은 Foil + 백킹을 뜻하며, 색상은 포일 두께(nm)를 나타냅니다.  
+   - 저에너지: 얇은 포일만으로도 CPE가 성립해 원(●)이 NIST와 겹칩니다.  
+   - 중간 에너지: 콤프턴 전자 범위가 길어져 백킹이 필요합니다.  
+   - 고에너지: μ/ρ가 작으므로 두꺼운 포일과 두꺼운 백킹이 동시에 요구됩니다.  
+   자세한 물리 해석은 아래 “복합 최적 두께 오버레이 – 물리적 해석 (KR/EN)” 섹션을 참고하세요.
+
 ### 출력 파일과 CSV 열 설명
 `transmission_summary.csv`에는 다음과 같은 블록이 포함됩니다.
 - **지오메트리/재질**: `run_id`(Geant4 run 번호), `world_half_cm`(세계 반길이), `thickness_nm`(포일 두께), `backing_thickness_um`(백킹 두께), `backing_material`(재질 이름), `density_g_cm3`(포일 밀도), `E_keV`(입사 광자 에너지)
@@ -173,6 +194,388 @@ variants 빌드는 기본 라인을 확장해 박막 뒤에 텅스텐 백킹(bac
   - (선택) 플로팅 전에 실행하면 각 두께/백킹 조합이 몇 개의 에너지 포인트를 갖고 있는지, 클램프된 런은 없는지, NIST 에너지 중 몇 개를 커버했는지 확인할 수 있습니다.
 - `rank_thickness_accuracy.py --csv transmission_summary.csv --reference nist_reference.csv --output thickness_accuracy_rankings.csv --best-output best_thickness_configs.csv --copy-best-plots`
   - 전체 에너지 범위에서 RMS |Δμ|와 RMS |Δμ_en|을 동시에 최소화하는 조합을 정렬합니다. Foil-only와 백킹 조합 각각의 1위는 `best_thickness_configs.csv`에 정리되며, 대응 PNG/오차 CSV가 `plots_variants/best/`에 자동으로 복사되어 발표 슬라이드에 바로 사용할 수 있습니다.
+
+---
+
+## 복합 최적 두께 오버레이 – 물리적 해석 (KR)
+
+### 1. 오버레이의 구성 방법
+
+*복합 최적 두께(overall best-thickness) 오버레이*는 다음 절차로 작성된다.
+
+* 각 광자 에너지 (E) 에 대해 다음 매개변수 조합을 스캔한다.
+
+  * 포일 두께 (t_{\text{foil}}) (nm),
+  * 백킹 두께 (t_{\text{back}}) (µm),
+  * 월드 크기.
+* 각 조합마다 시뮬레이션 결과와 NIST 표 사이의 차이를
+  [
+  \text{score}(E,t) = w_{\mu}|\Delta \mu| + w_{\mu_{\mathrm{en}}}|\Delta \mu_{\mathrm{en}}|
+  ]
+  로 정의한다.
+* 같은 에너지에서 score가 가장 작은 조합 하나만을 선택하여 플롯에 표시한다.
+
+플롯에서의 기호는 다음과 같다.
+
+* **원(●)**: **포일 내부 침적 에너지만**을 사용하여 계산된 양
+  (백킹이 없는 얇은 포일 μ_{\mathrm{en}}).
+* **사각형(□)**: **포일 + 백킹 전체**를 사용한 양
+
+  * 비충돌(primary) 투과로부터 얻은 μ/ρ,
+  * CPE 가정 하에서의 μ_{\mathrm{en}}/ρ (μ × NIST μ_{\mathrm{en}}/μ 또는 μ_{\mathrm{tr}}).
+* **컬러바**: 해당 에너지에서 선택된 **포일 두께(nm)**
+  (어두운 색 = 얇은 포일, 밝은 색 = 두꺼운 포일).
+
+이 오버레이는 “에너지별로 두께와 백킹을 최적으로 선택했을 때 Geant4 결과가 NIST μ/ρ, μ_{\mathrm{en}}/ρ를 어느 정도까지 재현할 수 있는가?”를 정량적으로 보여준다.
+
+---
+
+### 2. 전하입자 평형(CPE)
+
+**전하입자 평형(CPE)** 은 측정 영역에서
+
+* 전자·양전자 등 전하입자가 그 영역으로 들어올 때 가져오는 에너지와
+* 그 영역을 빠져나갈 때 들고 나가는 에너지
+
+가 서로 거의 같아지는 상태를 의미한다. CPE가 성립하면, 광자가 전하입자에 전달한 에너지는 평균적으로 모두 **그 주변에 국소적으로 침적되는 것**으로 취급할 수 있다. NIST의 에너지 흡수 계수 (\mu_{\mathrm{en}}/\rho) 는 이러한 **무한하고 균질한 매질에서 CPE가 성립한다고 가정**하여 정의된다.
+
+반면, 얇은 포일에서는 전자가 포일을 벗어나기 쉬우므로 CPE가 깨지고, 포일 내부 침적 에너지로부터 계산한 (\mu_{\mathrm{en}}/\rho) 는 항상 NIST 값보다 작게 나타난다.
+
+---
+
+### 3. 두께의 역할: 감쇠와 전자 범위의 절충
+
+NIST의 (\mu/\rho), (\mu_{\mathrm{en}}/\rho) 는 **무한 슬랩**을 가정하지만, 본 시뮬레이션에서는 유한 두께 포일(및 백킹)을 사용한다. NIST 조건에 가깝게 만들기 위해서는 두 가지 요구 조건을 동시에 만족해야 한다.
+
+1. **CPE 근사**
+   포일 + 백킹의 전체 두께가 해당 에너지에서 전자(또는 양전자)의 CSDA range보다 충분히 커야 대부분의 전하입자가 재료 안에서 멈춘다.
+
+2. **투과값의 수치적 안정성**
+   비충돌 투과도 (T) 로부터
+   [
+   \mu = -\frac{\ln T}{t}
+   ]
+   를 사용해 μ를 추출하므로, (T) 가 0이나 1에 너무 가깝지 않아야 한다. 그렇지 않으면 작은統계 변동이 μ에 큰 오차를 유발한다.
+
+이 조건들은 **광학 두께**
+[
+\tau = (\mu/\rho),\rho,t
+]
+로 요약할 수 있으며, 실제 계산에서는 (\tau \approx 0.1\text{–}5) 정도의 범위가 감쇠와 통계 안정성 사이의 균형을 잘 이룬다.
+
+복합 최적 두께 곡선은 에너지에 따른 이러한 절충 조건이 가장 잘 만족되는 두께 조합들의 집합이라고 해석할 수 있다.
+
+---
+
+### 4. 저에너지 영역 (< 약 20 keV)
+
+**상호작용 특성**
+
+* 광자 감쇠는 거의 전적으로 광전효과에 의해 일어나며, (\mu/\rho) 값이 매우 크다.
+* 텅스텐에서 광자의 평균 자유 경로는 1 µm보다 훨씬 짧다.
+
+**전자 범위**
+
+* 광전전자와 오제 전자의 범위는 수십 nm 수준이다.
+* 수백 nm 수준의 포일만으로도 전자 궤적이 거의 모두 포일 안에 포함된다.
+
+**결과**
+
+* 포일 단독으로도 CPE가 잘 성립한다.
+* 너무 두껍지 않은 한, 매우 얇은 포일에서도 충분한 감쇠가 발생한다.
+* 전자들이 포일을 거의 벗어나지 않으므로 백킹의 영향은 미미하다.
+
+따라서 이 구간에서는
+
+* 포일-전용 (\mu_{\mathrm{en,raw}}/\rho) 가 이미 NIST (\mu_{\mathrm{en}}/\rho) 와 잘 일치하며,
+* 그래프 상에서도 어두운 색(얇은 포일)의 마커들이 NIST 곡선 위에 거의 겹쳐 나타난다.
+
+---
+
+### 5. 중간 에너지 영역 (약 20–300 keV)
+
+**상호작용 특성**
+
+* 콤프턴 산란이 우세하며, 에너지가 증가함에 따라 (\mu/\rho) 는 감소한다.
+
+**전자 범위**
+
+* 콤프턴 전자의 범위는 수백 nm에서 수십 µm까지 증가한다.
+* 얇은 포일에서는 상당수 전자가 포일을 통과하여 진공 또는 백킹으로 빠져나간다.
+
+**결과**
+
+* 포일만을 스코어링하는 경우 CPE가 성립하지 않으며, 국소 침적 에너지는 실제 광자-전자 에너지 전달량보다 작다.
+  → (\mu_{\mathrm{en,raw}}/\rho) 가 NIST 값보다 작게 편향된다.
+* 포일 뒤에 **백킹 slab** 를 두면 빠져나간 전자들이 그 안에서 멈추게 되어, 전체 slab가 무한 매질에 더 가까운 거동을 보인다.
+* 그러나 포일을 지나치게 두껍게 만들면 (T) 가 매우 작아져 μ 추출의 통계적 안정성이 떨어진다.
+
+이 에너지 범위에서 score를 최소화하는 조합은 보통
+
+* **중간 정도 두께의 포일**과
+* **유의미한 두께의 백킹**
+
+을 함께 사용하는 경우이며, 플롯에서는 중간 색깔의 사각형 마커들로 나타난다.
+
+---
+
+### 6. 고에너지 영역 (300 keV – 수 MeV)
+
+**상호작용 특성**
+
+* (\mu/\rho) 가 급격히 감소한다.
+* 수 MeV까지는 콤프턴 산란이 주를 이루고, 그 이상에서는 전자쌍 생성이 기여한다.
+
+**전자·양전자 범위**
+
+* 2차 전자·양전자의 CSDA range는 수백 µm에서 수 mm 수준까지 증가한다.
+
+**결과**
+
+* 얇은 포일은 거의 투명해져 (T \approx 1) 이 되며, 이때 μ 추정치는 수치적으로 불안정하다.
+* 전하입자의 대부분이 포일을 빠져나가므로 포일-전용 (\mu_{\mathrm{en,raw}}/\rho) 는 NIST (\mu_{\mathrm{en}}/\rho) 보다 훨씬 작게 나온다.
+* NIST의 무한 매질 조건에 가깝게 만들기 위해서는 **포일과 백킹 모두 상당한 두께**를 가져야 한다.
+
+따라서 고에너지 영역에서 최적 조합은
+
+* **µm 스케일 이상의 포일**과
+* **두꺼운 백킹**
+
+으로 구성되며, 플롯 상에서는 밝은 색의 사각형 마커로 나타난다.
+
+---
+
+### 7. 에너지에 따른 포일-전용/포일+백킹 선택
+
+어떤 에너지에서 포일-전용(●)과 포일+백킹(□) 중 어느 쪽이 선택되는지는 전적으로 score
+[
+\text{score} = w_{\mu}|\Delta\mu| + w_{\mu_{\mathrm{en}}}|\Delta\mu_{\mathrm{en,CPE}}|
+]
+에 의해 결정된다.
+
+* **저에너지**에서는 포일만으로도 CPE가 성립하므로 포일-전용 데이터가 NIST 값과 매우 잘 일치한다. 이 경우 최적 행은 주로 **원(●)** 으로 표시된다.
+* **중·고에너지**에서는 전자 도피가 커서 포일-전용 (\mu_{\mathrm{en,raw}}/\rho) 가 크게 편향된다. 백킹을 포함하면 CPE 근사가 개선되어 μ와 (\mu_{\mathrm{en}}/\rho) 모두에서 오차가 줄어들며, 최적 조합은 보통 **사각형(□)** 으로 나타난다.
+
+이는 백킹의 물리적 역할(무한 매질 가정을 회복하기 위한 두께 확보)을 잘 반영하는 결과이다.
+
+---
+
+### 8. NIST 곡선과의 일치가 의미하는 것
+
+복합 최적 두께 곡선에 포함된 각 점은
+
+1. 투과도 (T) 가 0이나 1에 치우치지 않아 μ 추정이 통계적으로 안정하고,
+2. 포일 + 백킹 두께가 해당 에너지에서 전자·양전자 범위를 충분히 포함하여 CPE에 가까우며,
+3. NIST μ/ρ 정의와 동일한 좁은 빔(비충돌) 기하를 유지하는
+
+구성을 나타낸다.
+
+이 조건이 만족되는 경우, NIST와의 잔차는
+
+* 유한한 몬테카를로統計,
+* Geant4 전자기 모델과 XCOM 단면 사이의 미세한 차이,
+* 참조표 보간 방식
+
+에 주로 기인한다.
+
+복합 최적 두께 오버레이가 넓은 에너지 범위에서 NIST 값을 수 % 이내로 추종한다는 사실은,
+
+> 개별 두께에서 관측되는 큰 오차의 대부분이 지오메트리와 CPE 조건의 미충족 때문이며, Geant4 물리 모형 자체의 근본적인 문제 때문이 아님을 보여준다.
+
+따라서 이 오버레이는 특정 두께에서 NIST와 차이가 클 때, 그 원인이 **포일·백킹 두께 선택**에 있는지, 아니면 물리 리스트에 있는지를 구분하는 유용한 진단 도구로 활용될 수 있다.
+
+---
+
+## Composite best-thickness overlay – physical interpretation (EN)
+
+### 1. Construction of the overlay
+
+The *composite best-thickness overlay* is obtained in the following way:
+
+* For each photon energy (E), the simulation is run over a grid of:
+
+  * foil thickness values (t_{\text{foil}}) (nm),
+  * backing thickness values (t_{\text{back}}) (µm),
+  * world half-sizes.
+* For each configuration, the deviation from the NIST tables is summarized by
+  [
+  \text{score}(E,t) = w_{\mu},|\Delta \mu| + w_{\mu_{\mathrm{en}}},|\Delta \mu_{\mathrm{en}}| ,
+  ]
+  where (\Delta\mu) and (\Delta\mu_{\mathrm{en}}) are the relative differences between simulated and NIST values of (\mu/\rho) and (\mu_{\mathrm{en}}/\rho).
+* For each energy, only the configuration with the lowest score is kept and plotted.
+
+On the figure:
+
+* **Circles (●)** denote quantities derived from **foil-only energy deposition**
+  (thin-film (\mu_{\mathrm{en}}), without backing).
+* **Squares (□)** denote quantities derived from **foil + backing**:
+
+  * (\mu/\rho) from uncollided (narrow-beam) transmission, and
+  * (\mu_{\mathrm{en}}/\rho) under the CPE assumption (either (\mu\times (\mu_{\mathrm{en}}/\mu)*{\text{NIST}}) or (\mu*{\mathrm{tr}})).
+* The **colour scale** encodes the selected **foil thickness** (nm) at that energy:
+
+  * darker colours correspond to thinner foils,
+  * brighter colours to thicker foils.
+
+Thus, the overlay answers the practical question:
+
+> For each photon energy, if thickness and backing are tuned freely within the scan, how closely can the Geant4 model reproduce the NIST (\mu/\rho) and (\mu_{\mathrm{en}}/\rho) curves?
+
+---
+
+### 2. Charged-particle equilibrium (CPE)
+
+**Charged-particle equilibrium (CPE)** denotes a situation in which, within the scoring region,
+
+* the energy carried into the region by charged particles (electrons, positrons)
+  is balanced by
+* the energy carried out of the region by charged particles,
+
+so that the net charged-particle energy current is approximately zero. Under CPE, all energy that photons transfer to charged particles can be treated, on average, as being deposited locally. The NIST energy-absorption coefficient (\mu_{\mathrm{en}}/\rho) is defined for an **infinite, homogeneous medium under CPE**.
+
+In a thin foil geometry, many electrons leave the scoring volume before losing their energy, so CPE is violated and any (\mu_{\mathrm{en}}/\rho) computed from local energy deposition will systematically underestimate the NIST value.
+
+---
+
+### 3. Role of thickness: attenuation vs electron range
+
+NIST (\mu/\rho) and (\mu_{\mathrm{en}}/\rho) correspond to an infinite slab.
+In the simulation we have a finite foil (optionally with backing), so thickness must be chosen to simultaneously satisfy two conditions:
+
+1. **Approximate CPE**
+   The foil + backing must be thick enough that most secondary electrons and positrons stop within the material. This requires that the total slab thickness is large compared to the electron CSDA range at the given energy.
+
+2. **Well-conditioned transmission**
+   The uncollided transmission (T) used to extract (\mu) via
+   [
+   \mu = -\frac{\ln T}{t}
+   ]
+   should not be extremely close to 0 or 1; otherwise small statistical fluctuations in (T) lead to large relative errors in (\mu).
+
+These two conditions can be expressed in terms of the **optical depth**
+[
+\tau = (\mu/\rho),\rho,t.
+]
+For practical purposes, (\tau) values of order unity ((\tau \sim 0.1\text{–}5)) give a good compromise between sufficient attenuation and stable statistics.
+
+The **best-thickness curve** is simply the set of thicknesses, as a function of energy, for which this compromise between CPE and transmission quality is most successfully achieved.
+
+---
+
+### 4. Low photon energies (< ~20 keV)
+
+**Interaction regime**
+
+* Photoelectric absorption dominates; (\mu/\rho) is very large.
+* The photon mean free path in tungsten is much smaller than one micrometre.
+
+**Electron ranges**
+
+* Photoelectrons and Auger electrons have ranges of only tens of nanometres.
+* Even a sub-micron foil is effectively “thick” for these electrons, so most of their energy is deposited within the foil.
+
+**Implications**
+
+* CPE is already well approximated in the foil alone.
+* Very thin foils (tens–hundreds of nm) already give a sizeable attenuation, so the main constraint is to avoid making the foil so thick that (T) becomes too small.
+* Backing has negligible influence, because electrons rarely reach the foil–backing interface.
+
+As a result:
+
+* Foil-only (\mu_{\mathrm{en,raw}}/\rho) agrees well with NIST (\mu_{\mathrm{en}}/\rho).
+* The optimal points at low energy correspond to **thin foils with or without backing**, represented by **dark-coloured markers** lying essentially on the NIST curves.
+
+---
+
+### 5. Intermediate energies (~20–300 keV)
+
+**Interaction regime**
+
+* Compton scattering becomes the dominant process.
+* (\mu/\rho) decreases with energy, but attenuation is still significant.
+
+**Electron ranges**
+
+* Compton electrons now have ranges from hundreds of nanometres up to tens of micrometres.
+* In a purely thin-foil geometry, a substantial fraction of these electrons escape into vacuum or into the backing without depositing all of their energy in the scoring volume.
+
+**Implications**
+
+* Foil-only scoring no longer satisfies CPE; local energy deposition underestimates the true energy transfer from photons.
+* Consequently, (\mu_{\mathrm{en,raw}}/\rho) is biased low relative to NIST.
+* Adding a **backing slab** behind the foil allows many of these electrons to stop in the material and improves the approximation to an infinite medium.
+* If the foil is made too thick, however, the transmission (T) becomes very small and extraction of (\mu) becomes statistically unstable.
+
+In this energy range, the configurations that minimize the score typically use:
+
+* **moderate foil thickness** (larger than at low energies), and
+* **non-negligible backing thickness**.
+
+In the overlay plot this behaviour appears as **intermediate colours** and a clear preference for **square markers (foil + backing)**.
+
+---
+
+### 6. High energies (300 keV – several MeV)
+
+**Interaction regime**
+
+* (\mu/\rho) decreases by orders of magnitude.
+* Compton scattering remains dominant up to a few MeV; at higher energies, pair production gradually contributes.
+
+**Electron and positron ranges**
+
+* Secondary electrons and positrons have continuous-slowing-down ranges of hundreds of micrometres to millimetres in tungsten.
+
+**Implications**
+
+* Thin foils become almost transparent: (T \approx 1) leads to a poorly conditioned estimate of (\mu).
+* Most charged particles leave the foil, so foil-only (\mu_{\mathrm{en,raw}}/\rho) can be much smaller than NIST (\mu_{\mathrm{en}}/\rho).
+* To approximate NIST’s infinite medium, **both the foil and the backing must be thick enough** to contain a substantial fraction of these long electron tracks.
+
+For high energies, the best-scoring configurations therefore involve:
+
+* **micron-scale foils** and
+* **comparatively thick backings**.
+
+In the overlay, these appear as **bright-coloured squares** at high energy, which again track the NIST curves closely once sufficient thickness has been provided.
+
+---
+
+### 7. Choice between foil-only and foil+backing at a given energy
+
+The selection between foil-only and foil+backing configurations is driven purely by the score
+[
+\text{score} = w_{\mu}|\Delta\mu| + w_{\mu_{\mathrm{en}}}|\Delta\mu_{\mathrm{en,CPE}}|.
+]
+
+* At **low energies**, CPE is already satisfied in the foil alone. Foil-only data reproduce NIST values very accurately, so the best rows are often **foil-only (●)**.
+* At **intermediate and high energies**, electron escape becomes significant. Including the backing slab improves both (\mu/\rho) and (\mu_{\mathrm{en}}/\rho), so the best rows are typically **foil + backing (□)**.
+
+This behaviour reflects the physical role of the backing: it is not a numerical trick, but a way to recover the infinite-medium assumption on which the NIST coefficients are based.
+
+---
+
+### 8. Why the composite curve follows NIST so closely
+
+For each photon energy, the configuration retained in the composite curve is one that:
+
+1. Provides a **reasonably attenuating slab** (transmission neither extremely close to 0 nor to 1);
+2. Is **thick enough** that electron and positron ranges are largely contained within the foil + backing, approximating CPE;
+3. Preserves a well-defined narrow-beam geometry, so that uncollided transmission can be interpreted in the same way as in the NIST μ/ρ definition.
+
+Under these conditions, residual deviations between the simulation and NIST are mainly due to:
+
+* finite Monte Carlo statistics,
+* small differences between the Geant4 electromagnetic models and XCOM cross sections,
+* and interpolation details in the reference tables.
+
+The fact that the composite best-thickness overlay stays within a few percent of NIST over a wide energy range indicates that:
+
+> Most large discrepancies seen in individual (single-thickness) runs are caused by geometric/CPE limitations, not by fundamental issues in the Geant4 physics models.
+
+The overlay therefore serves as a useful diagnostic: if a particular experimental thickness gives poor agreement with NIST, but the composite curve at that energy is close to NIST, the discrepancy can be attributed to the chosen geometry (foil too thin, backing insufficient, or extreme transmission), rather than to the underlying cross sections.
+
+---
 
 ### 권장 실행 순서
 ```bash
