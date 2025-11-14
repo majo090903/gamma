@@ -37,6 +37,7 @@
 #include "ProcessesCount.hh"
 
 #include "G4RunManager.hh"
+#include "G4String.hh"
 #include "globals.hh"
 
 #include <vector>
@@ -59,7 +60,9 @@ public:
   void CountInjection();
   void RecordTransmission(G4double energy, G4double cosZ, G4bool scattered);
   void AddIncidentEnergy(G4double energy);
-  void AddDepositedEnergy(G4double energy);
+  void AddFoilDepositedEnergy(G4double energy);
+  void AddBackingDepositedEnergy(G4double energy);
+  void AddOtherDepositedEnergy(G4double energy);
 
 private:
   struct SummaryRow {
@@ -71,8 +74,12 @@ private:
     G4double energy_keV;
     G4double totalInjected;
     G4double transmittedUncollided;
+    G4double transmittedScattered;
     G4double transmittedTotal;
     G4double T_counts;
+    G4double T_counts_scattered;
+    G4double T_counts_clamped;
+    G4double clamp_flag;
     G4double mu_counts_per_mm;
     G4double mu_counts_cm2_g;
     G4double mu_calc_cm2_g;
@@ -88,17 +95,27 @@ private:
     G4double mu_en_cpe_per_mm;
     G4double mu_en_cpe_cm2_g;
     G4double delta_mu_en_cpe_percent;
+    G4double delta_mu_counts_vs_calc_percent;
+    G4double delta_mu_en_cpe_vs_mu_tr_percent;
     G4double absorbedFraction;
+    G4double absorbedFractionSlab;
     G4double mu_en_per_mm;
     G4double mu_en_cm2_g;
     G4double mu_en_raw_per_mm;
     G4double mu_en_raw_cm2_g;
+    G4double mu_en_raw_slab_per_mm;
+    G4double mu_en_raw_slab_cm2_g;
     G4double mu_eff_per_mm;
     G4double mu_eff_cm2_g;
     G4double E_trans_unc_keV;
     G4double E_trans_tot_keV;
     G4double E_abs_keV;
+    G4double E_abs_backing_keV;
+    G4double E_abs_slab_keV;
+    G4double E_abs_other_keV;
+    G4double T_energy_unc;
     G4double T_energy_tot;
+    G4String backingMaterial;
   };
 
   void WriteSummaryFile() const;
@@ -117,7 +134,9 @@ private:
   G4double fIncidentEnergy;
   G4double fTransmittedEnergyUncollided;
   G4double fTransmittedEnergyTotal;
-  G4double fDepositedEnergy;
+  G4double fDepositedEnergyFoil;
+  G4double fDepositedEnergyBacking;
+  G4double fDepositedEnergyOther;
 
   std::vector<SummaryRow> fSummaryRows;
 
@@ -131,5 +150,9 @@ private:
   mutable bool fReferenceAvailable;
   mutable G4String fReferenceSource;
   mutable std::vector<ReferenceDatum> fReferenceData;
+
+  G4bool  fUseLogInterpolation;
+  G4bool  fPreferCalculatorMuTr;
+  G4int   fComptonIntegrationSteps;
 };
 #endif

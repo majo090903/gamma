@@ -1,3 +1,5 @@
+# High-energy tail of the tungsten scan. Used after thick foils are selected so
+# T_counts remains in a numerically stable range out to 100 MeV.
 /random/setSeeds 123456 789012
 
 /control/alias E 500

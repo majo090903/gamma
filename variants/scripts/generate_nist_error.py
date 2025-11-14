@@ -56,14 +56,13 @@ def main() -> None:
     sim["E_keV"] = sim["E_keV"].astype(float)
 
     attenuation_col = _first_present(sim.columns, ["mu_counts_cm2_g", "mu_calc_cm2_g", "mu_tr_cm2_g"])
-    energy_abs_col = _first_present(
-        sim.columns,
-        [
-            "mu_en_cpe_cm2_g",
-            "mu_en_cm2_g",
-            "mu_en_raw_cm2_g",
-        ],
-    )
+    energy_abs_candidates = [
+        "mu_en_cpe_cm2_g",
+        "mu_en_cm2_g",
+        "mu_en_raw_cm2_g",
+    ]
+    energy_abs_col = _first_present(sim.columns, energy_abs_candidates)
+    has_raw_slab = "mu_en_raw_slab_cm2_g" in sim.columns
 
     if attenuation_col is None:
         raise ValueError(
@@ -82,6 +81,12 @@ def main() -> None:
     sim["delta_mu_percent"] = _percent_delta(sim[attenuation_col], sim["mu_ref_cm2_g"])
     if energy_abs_col is not None:
         sim["delta_mu_en_percent"] = _percent_delta(sim[energy_abs_col], sim["mu_en_ref_cm2_g"])
+        if "mu_en_raw_cm2_g" in sim.columns:
+            sim["delta_mu_en_raw_percent"] = _percent_delta(sim["mu_en_raw_cm2_g"], sim["mu_en_ref_cm2_g"])
+        if has_raw_slab:
+            sim["delta_mu_en_raw_slab_percent"] = _percent_delta(
+                sim["mu_en_raw_slab_cm2_g"], sim["mu_en_ref_cm2_g"]
+            )
 
     exact_match = np.isclose(sim["E_keV"].to_numpy()[:, None], ref_energies, rtol=0.0, atol=1e-6).any(axis=1)
     sim["nist_exact_energy_match"] = exact_match
@@ -102,6 +107,20 @@ def main() -> None:
                 "delta_mu_en_percent",
             ]
         )
+        if "mu_en_raw_cm2_g" in sim.columns:
+            output_cols.extend(
+                [
+                    "mu_en_raw_cm2_g",
+                    "delta_mu_en_raw_percent",
+                ]
+            )
+        if has_raw_slab:
+            output_cols.extend(
+                [
+                    "mu_en_raw_slab_cm2_g",
+                    "delta_mu_en_raw_slab_percent",
+                ]
+            )
 
     out_df = sim[output_cols].copy()
     rename_map = {attenuation_col: "mu_sim_cm2_g"}

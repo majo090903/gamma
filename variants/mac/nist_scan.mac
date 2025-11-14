@@ -1,6 +1,8 @@
 /control/macroPath mac
 
-# Scan NIST reference energies across world sizes and foil thicknesses
+# Scan the NIST reference energies across representative world sizes and foil
+# thicknesses. Each block restarts the RNG so foil/backing configurations are
+# directly comparable and τ stays away from the pathological <0.01 or >0.99 T regime.
 /control/execute init.mac
 
 /random/setSeeds 123456 789012

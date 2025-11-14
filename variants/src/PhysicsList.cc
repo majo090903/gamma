@@ -199,6 +199,7 @@ void PhysicsList::ConstructProcess()
   emParams->SetAugerCascade(true);
   emParams->SetDeexcitationIgnoreCut(false);
   emParams->SetDeexActiveRegion("FoilRegion", true, true, true);
+  emParams->SetDeexActiveRegion("BackingRegion", true, true, true);
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

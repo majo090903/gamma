@@ -51,6 +51,16 @@ def main():
         default="nist_reference.csv",
         help="Optional reference CSV with columns E_keV, mu_over_rho_cm2_g, mu_en_over_rho_cm2_g (default: %(default)s). Use 'none' to skip.",
     )
+    parser.add_argument(
+        "--show-raw-foil",
+        action="store_true",
+        help="Overlay mu_en/rho derived directly from foil-only deposition.",
+    )
+    parser.add_argument(
+        "--show-raw-slab",
+        action="store_true",
+        help="Overlay mu_en/rho derived from foil+backing deposition (when present).",
+    )
 
     args = parser.parse_args()
 
@@ -91,15 +101,24 @@ def main():
 
     if args.world is not None:
         df = df[df["world_half_cm"] == args.world]
-        if df.empty():
-            raise ValueError(f"No rows found for world_half_cm == {args.world}")
+    if df.empty:
+        raise ValueError(f"No rows found for world_half_cm == {args.world}")
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    foil_plot_dir = output_dir / "foil_only"
+    backed_plot_dir = output_dir / "backed"
+    foil_plot_dir.mkdir(parents=True, exist_ok=True)
+    backed_plot_dir.mkdir(parents=True, exist_ok=True)
     error_dir = None
+    foil_error_dir = None
+    backed_error_dir = None
     if ref_df is not None:
         error_dir = output_dir / "errors"
-        error_dir.mkdir(parents=True, exist_ok=True)
+        foil_error_dir = error_dir / "foil_only"
+        backed_error_dir = error_dir / "backed"
+        foil_error_dir.mkdir(parents=True, exist_ok=True)
+        backed_error_dir.mkdir(parents=True, exist_ok=True)
 
     has_backing = "backing_thickness_um" in df.columns
     group_cols = ["thickness_nm"]
@@ -122,6 +141,13 @@ def main():
                 thickness = float(key)
             backing_um = None
         group = group.sort_values("E_keV")
+        if has_backing and backing_um > 0.0:
+            plot_parent = backed_plot_dir
+            error_parent = backed_error_dir
+        else:
+            plot_parent = foil_plot_dir
+            error_parent = foil_error_dir
+
         if ref_df is not None:
             fig, (ax, diff_ax) = plt.subplots(
                 nrows=2,
@@ -142,8 +168,24 @@ def main():
             x_label = "Photon energy (keV)"
 
         ax.loglog(energy, group["mu_counts_cm2_g"], label=r"$\mu/\rho$ (counts)")
-        ax.loglog(energy, group["mu_en_cm2_g"], linestyle="--", label=r"$\mu_{en}/\rho$ (deposit)")
+        ax.loglog(energy, group["mu_en_cm2_g"], linestyle="--", label=r"$\mu_{en}/\rho$ (CPE)")
         ax.loglog(energy, group["mu_eff_cm2_g"], linestyle=":", label=r"$\mu_{\mathrm{eff}}/\rho$")
+        if args.show_raw_foil and "mu_en_raw_cm2_g" in group.columns:
+            ax.loglog(
+                energy,
+                group["mu_en_raw_cm2_g"],
+                linestyle="-.",
+                alpha=0.65,
+                label=r"$\mu_{en}/\rho$ (raw foil)",
+            )
+        if args.show_raw_slab and "mu_en_raw_slab_cm2_g" in group.columns:
+            ax.loglog(
+                energy,
+                group["mu_en_raw_slab_cm2_g"],
+                linestyle="--",
+                alpha=0.65,
+                label=r"$\mu_{en}/\rho$ (raw slab)",
+            )
 
         if ref_df is not None:
             ref_energy = ref_df["E_keV"] / (1000.0 if args.energy_unit == "MeV" else 1.0)
@@ -220,6 +262,10 @@ def main():
                     merged["delta_mu_en_raw_percent"] = (
                         (merged["mu_en_raw_cm2_g"] - merged["mu_en_ref_cm2_g"]) / delta_cpe_denom
                     ) * 100.0
+                    if "mu_en_raw_slab_cm2_g" in merged.columns:
+                        merged["delta_mu_en_raw_slab_percent"] = (
+                            (merged["mu_en_raw_slab_cm2_g"] - merged["mu_en_ref_cm2_g"]) / delta_cpe_denom
+                        ) * 100.0
 
                     merged["delta_mu_counts_cm2_g"] = merged["mu_counts_cm2_g"] - merged["mu_ref_cm2_g"]
                     merged["delta_mu_en_cpe_cm2_g"] = merged["mu_en_cpe_cm2_g"] - merged["mu_en_ref_cm2_g"]
@@ -230,7 +276,9 @@ def main():
                     if has_backing:
                         backing_label_value = f"{backing_um:g}".replace(".", "_")
                         backing_label = f"_backing{backing_label_value}um"
-                    error_path = error_dir / f"errors_{thickness_label}nm{backing_label}.csv"
+                    if error_parent is None:
+                        error_parent = error_dir
+                    error_path = error_parent / f"errors_{thickness_label}nm{backing_label}.csv"
                     error_columns = [
                         "world_half_cm",
                         "thickness_nm",
@@ -252,6 +300,13 @@ def main():
                         "delta_mu_en_raw_percent",
                         "mu_eff_cm2_g",
                     ])
+                    if "mu_en_raw_slab_cm2_g" in merged.columns:
+                        error_columns.extend(
+                            [
+                                "mu_en_raw_slab_cm2_g",
+                                "delta_mu_en_raw_slab_percent",
+                            ]
+                        )
                     merged[error_columns].to_csv(error_path, index=False)
                     print(f"Saved {error_path}")
 
@@ -276,8 +331,16 @@ def main():
                             merged["delta_mu_en_raw_percent"],
                             marker="^",
                             linestyle=":",
-                            label=r"$\Delta \mu_{en}/\rho$ raw (%)",
+                            label=r"$\Delta \mu_{en}/\rho$ raw foil (%)",
                         )
+                        if "delta_mu_en_raw_slab_percent" in merged.columns:
+                            diff_ax.semilogx(
+                                energy_diff,
+                                merged["delta_mu_en_raw_slab_percent"],
+                                marker="v",
+                                linestyle=":",
+                                label=r"$\Delta \mu_{en}/\rho$ raw slab (%)",
+                            )
                         diff_ax.axhline(0.0, color="black", linewidth=0.8)
                         diff_ax.set_ylabel("Δ [%]")
                         diff_ax.grid(True, which="both", linestyle=":", alpha=0.4)
@@ -313,7 +376,7 @@ def main():
         if has_backing:
             backing_label_value = f"{backing_um:g}".replace(".", "_")
             backing_label = f"_backing{backing_label_value}um"
-        outfile = output_dir / f"mu_vs_energy_{thickness_label}nm{backing_label}_{suffix}.png"
+        outfile = plot_parent / f"mu_vs_energy_{thickness_label}nm{backing_label}_{suffix}.png"
         fig.tight_layout()
         fig.savefig(outfile, dpi=200)
         plt.close(fig)

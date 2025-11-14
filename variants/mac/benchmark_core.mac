@@ -1,3 +1,6 @@
+# Core benchmark sequence. Thicknesses were hand-picked so each energy sits near
+# optical depth τ≈1, avoiding the T→0 or T→1 regimes that amplify counting noise.
+# `/control/alias backingThickness_um` must be defined before executing this macro.
 /control/macroPath mac
 
 /control/execute init.mac

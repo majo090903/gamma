@@ -16,6 +16,7 @@
 #include "G4UnitsTable.hh"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdlib>
 #include <fstream>
@@ -25,6 +26,37 @@
 namespace
 {
   constexpr G4double kEpsilon = 1.e-12;
+
+  bool GetEnvFlag(const char* name, bool defaultValue)
+  {
+    const char* value = std::getenv(name);
+    if (!value) {
+      return defaultValue;
+    }
+    std::string token(value);
+    std::transform(token.begin(), token.end(), token.begin(), [](unsigned char c) { return std::tolower(c); });
+    if (token == "1" || token == "true" || token == "on" || token == "yes") {
+      return true;
+    }
+    if (token == "0" || token == "false" || token == "off" || token == "no") {
+      return false;
+    }
+    return defaultValue;
+  }
+
+  G4int GetEnvInt(const char* name, G4int defaultValue)
+  {
+    const char* value = std::getenv(name);
+    if (!value) {
+      return defaultValue;
+    }
+    char* end = nullptr;
+    const long parsed = std::strtol(value, &end, 10);
+    if (end == value) {
+      return defaultValue;
+    }
+    return static_cast<G4int>(parsed);
+  }
 }
 
 RunAction::RunAction(DetectorConstruction* detector)
@@ -37,11 +69,20 @@ RunAction::RunAction(DetectorConstruction* detector)
     fIncidentEnergy(0.),
     fTransmittedEnergyUncollided(0.),
     fTransmittedEnergyTotal(0.),
-    fDepositedEnergy(0.),
+    fDepositedEnergyFoil(0.),
+    fDepositedEnergyBacking(0.),
+    fDepositedEnergyOther(0.),
     fReferenceLoaded(false),
     fReferenceAvailable(false),
-    fReferenceSource("")
-{}
+    fReferenceSource(""),
+    fUseLogInterpolation(GetEnvFlag("W_USE_LOG_INTERP", false)),
+    fPreferCalculatorMuTr(GetEnvFlag("W_USE_MU_TR_CALC", true)),
+    fComptonIntegrationSteps(512)
+{
+  const G4int requestedSteps = GetEnvInt("W_COMPTON_STEPS", fComptonIntegrationSteps);
+  const G4int evenSteps = (requestedSteps % 2 == 0) ? requestedSteps : requestedSteps + 1;
+  fComptonIntegrationSteps = std::max(32, evenSteps);
+}
 
 RunAction::~RunAction()
 {
@@ -64,7 +105,9 @@ void RunAction::BeginOfRunAction(const G4Run* run)
   fIncidentEnergy = 0.;
   fTransmittedEnergyUncollided = 0.;
   fTransmittedEnergyTotal = 0.;
-  fDepositedEnergy = 0.;
+  fDepositedEnergyFoil = 0.;
+  fDepositedEnergyBacking = 0.;
+  fDepositedEnergyOther = 0.;
 }
 
 void RunAction::EndOfRunAction(const G4Run* run)
@@ -88,7 +131,15 @@ void RunAction::EndOfRunAction(const G4Run* run)
     G4cout << " [advice] T<0.005: decrease foil thickness or increase primaries." << G4endl;
   }
 
-  const G4double transmissionCounts = std::clamp(transmissionCountsRaw, 1.e-9, 1. - 1.e-9);
+  const G4double clampLow = 1.e-9;
+  const G4double clampHigh = 1. - 1.e-9;
+  G4double transmissionCounts = std::clamp(transmissionCountsRaw, clampLow, clampHigh);
+  G4int clampFlag = 0;
+  if (transmissionCountsRaw <= clampLow) {
+    clampFlag = 1;
+  } else if (transmissionCountsRaw >= clampHigh) {
+    clampFlag = 2;
+  }
   if (std::abs(transmissionCountsRaw - transmissionCounts) > 1.e-12) {
     G4cout << " [RunAction] Warning: transmission fraction " << transmissionCountsRaw
            << " clamped to " << transmissionCounts
@@ -99,15 +150,24 @@ void RunAction::EndOfRunAction(const G4Run* run)
     const G4double p = std::clamp(transmissionCountsRaw, 0.0, 1.0);
     sigma_T_counts = std::sqrt(p * std::max(0.0, 1.0 - p) / injected);
   }
+  const G4double transmissionScattered = (injected > 0.) ? static_cast<G4double>(fDetectedScattered) / injected : 0.;
 
   auto* material = fDetector->GetMaterial();
+  auto* backingMaterial = fDetector->GetBackingMaterial();
   const G4double density = material ? material->GetDensity() : 0.;
   const G4double density_g_cm3 = density / (g/cm3);
+  const G4double backingDensity = backingMaterial ? backingMaterial->GetDensity() : density;
+  const G4double backing_density_g_cm3 = backingDensity / (g/cm3);
+  const G4String backingMaterialName = backingMaterial ? backingMaterial->GetName() : "";
 
   const G4double thickness = fDetector->GetFoilThickness();  // Geant4 length (mm)
   const G4double thickness_mm = thickness / mm;
   const G4double thickness_nm = thickness / nm;
-  const G4double backing_thickness_um = fDetector->GetBackingThickness() / um;
+  const G4double thickness_cm = thickness / cm;
+  const G4double backing_thickness = fDetector->GetBackingThickness();
+  const G4double backing_thickness_um = backing_thickness / um;
+  const G4double backing_thickness_mm = backing_thickness / mm;
+  const G4double backing_thickness_cm = backing_thickness / cm;
 
   const G4double worldHalf_cm = fDetector->GetWorldHalfLength() / cm;
 
@@ -138,7 +198,11 @@ void RunAction::EndOfRunAction(const G4Run* run)
 
   const G4double E_trans_unc_keV = fTransmittedEnergyUncollided / keV;
   const G4double E_trans_tot_keV = fTransmittedEnergyTotal / keV;
-  const G4double E_dep_total_keV = fDepositedEnergy / keV;
+  const G4double E_dep_foil_keV = fDepositedEnergyFoil / keV;
+  const G4double E_dep_backing_keV = fDepositedEnergyBacking / keV;
+  const G4double E_dep_other_keV = fDepositedEnergyOther / keV;
+  const G4double E_dep_slab_keV = E_dep_foil_keV + E_dep_backing_keV;
+  const G4double E_dep_total_keV = E_dep_slab_keV + E_dep_other_keV;
 
   const G4double fluence_energy_keV = energy_keV * injected;
   G4double T_energy_unc = 0.;
@@ -148,20 +212,42 @@ void RunAction::EndOfRunAction(const G4Run* run)
 
   G4double absorbedFraction = 0.;
   if (fluence_energy_keV > 0.) {
-    absorbedFraction = E_dep_total_keV / fluence_energy_keV;
+    absorbedFraction = E_dep_foil_keV / fluence_energy_keV;
   }
   absorbedFraction = std::clamp(absorbedFraction, 0.0, 1.0);
-
-  const G4double mass_path_g_cm2 = density_g_cm3 * (thickness_mm / 10.0); // mm→cm
-  G4double mu_en_over_rho = 0.;
-  if (fluence_energy_keV > 0. && mass_path_g_cm2 > 0.) {
-    mu_en_over_rho = (E_dep_total_keV / fluence_energy_keV) / mass_path_g_cm2;
+  G4double absorbedFractionSlab = 0.;
+  if (fluence_energy_keV > 0.) {
+    absorbedFractionSlab = E_dep_slab_keV / fluence_energy_keV;
   }
-  const G4double mu_en_per_cm = mu_en_over_rho * density_g_cm3;
-  G4double mu_en_per_mm = mu_en_per_cm / 10.0;
-  G4double mu_en_cm2_g   = mu_en_over_rho;
-  const G4double mu_en_raw_per_mm = mu_en_per_mm;
-  const G4double mu_en_raw_cm2_g  = mu_en_cm2_g;
+  absorbedFractionSlab = std::clamp(absorbedFractionSlab, 0.0, 1.0);
+
+  const G4double mass_path_foil_g_cm2 = density_g_cm3 * (thickness_mm / 10.0);
+  const G4double mass_path_backing_g_cm2 = backing_density_g_cm3 * (backing_thickness_mm / 10.0);
+  const G4double mass_path_slab_g_cm2 = mass_path_foil_g_cm2 + mass_path_backing_g_cm2;
+  G4double mu_en_raw_foil_cm2_g = 0.;
+  if (fluence_energy_keV > 0. && mass_path_foil_g_cm2 > 0.) {
+    mu_en_raw_foil_cm2_g = (E_dep_foil_keV / fluence_energy_keV) / mass_path_foil_g_cm2;
+  }
+  G4double mu_en_raw_slab_cm2_g = 0.;
+  if (fluence_energy_keV > 0. && mass_path_slab_g_cm2 > 0.) {
+    mu_en_raw_slab_cm2_g = (E_dep_slab_keV / fluence_energy_keV) / mass_path_slab_g_cm2;
+  }
+  const G4double mu_en_raw_foil_per_mm = (density_g_cm3 > 0.)
+                                           ? (mu_en_raw_foil_cm2_g * density_g_cm3 / 10.0)
+                                           : 0.0;
+  const G4double slabThickness_cm = thickness_cm + backing_thickness_cm;
+  G4double rho_eff_slab = 0.;
+  if (slabThickness_cm > 0. && mass_path_slab_g_cm2 > 0.) {
+    rho_eff_slab = mass_path_slab_g_cm2 / slabThickness_cm;
+  }
+  const G4double mu_en_raw_slab_per_mm = (rho_eff_slab > 0.)
+                                           ? (mu_en_raw_slab_cm2_g * rho_eff_slab / 10.0)
+                                           : 0.0;
+
+  G4double mu_en_per_mm = mu_en_raw_foil_per_mm;
+  G4double mu_en_cm2_g  = mu_en_raw_foil_cm2_g;
+  const G4double mu_en_raw_per_mm = mu_en_raw_foil_per_mm;
+  const G4double mu_en_raw_cm2_g  = mu_en_raw_foil_cm2_g;
 
   G4double mu_eff_per_mm = 0.;
   if (absorbedFraction > 0. && absorbedFraction < 1.) {
@@ -185,6 +271,8 @@ void RunAction::EndOfRunAction(const G4Run* run)
   G4double mu_en_cpe_per_mm = mu_en_per_mm;
   G4double mu_en_cpe_cm2_g  = mu_en_cm2_g;
   G4double delta_mu_en_cpe_percent = 0.;
+  G4double delta_mu_counts_vs_calc_percent = 0.;
+  G4double delta_mu_en_cpe_vs_mu_tr_percent = 0.;
   if (material && primaryEnergy > 0.) {
     G4EmCalculator calculator;
     const G4String materialName = material->GetName();
@@ -230,14 +318,19 @@ void RunAction::EndOfRunAction(const G4Run* run)
     const G4double refRatio = mu_ref_en_cm2_g / mu_ref_cm2_g;
     mu_en_cpe_cm2_g  = mu_counts_cm2_g * refRatio;
     mu_en_cpe_per_mm = mu_counts_per_mm * refRatio;
-  } else if (mu_tr_cm2_g > 0.) {
+  } else if (fPreferCalculatorMuTr && mu_tr_cm2_g > 0.) {
     mu_en_cpe_cm2_g  = mu_tr_cm2_g;
     mu_en_cpe_per_mm = mu_tr_per_mm;
   }
   if (hasReference && mu_ref_en_cm2_g > 0.) {
     delta_mu_en_cpe_percent = (mu_en_cpe_cm2_g - mu_ref_en_cm2_g) / mu_ref_en_cm2_g * 100.0;
   }
-
+  if (mu_calc_cm2_g > 0.) {
+    delta_mu_counts_vs_calc_percent = (mu_counts_cm2_g - mu_calc_cm2_g) / mu_calc_cm2_g * 100.0;
+  }
+  if (mu_tr_cm2_g > 0.) {
+    delta_mu_en_cpe_vs_mu_tr_percent = (mu_en_cpe_cm2_g - mu_tr_cm2_g) / mu_tr_cm2_g * 100.0;
+  }
   mu_en_per_mm = mu_en_cpe_per_mm;
   mu_en_cm2_g  = mu_en_cpe_cm2_g;
 
@@ -249,28 +342,32 @@ void RunAction::EndOfRunAction(const G4Run* run)
   G4cout << "   - uncollided        : " << fDetectedUncollided << G4endl;
   G4cout << "   - scattered         : " << fDetectedScattered << G4endl;
   G4cout << " Transmission (counts) : " << transmissionCountsRaw << " (sigma " << sigma_T_counts << ")" << G4endl;
+  if (clampFlag != 0) {
+    G4cout << "   used (clamped)     : " << transmissionCounts << " [flag " << clampFlag << "]" << G4endl;
+  }
+  G4cout << " Transmission (scatt.) : " << transmissionScattered << G4endl;
   G4cout << " mu (counts) [1/mm]    : " << mu_counts_per_mm << G4endl;
   G4cout << " mu/rho (counts) [cm2/g]: " << mu_counts_cm2_g << " (sigma " << sigma_mu_counts_cm2_g << ")" << G4endl;
   G4cout << " Energy frac (uncoll.) : " << T_energy_unc << G4endl;
   G4cout << " mu_eff [1/mm]         : " << mu_eff_per_mm << G4endl;
   G4cout << " mu_eff/rho [cm2/g]    : " << mu_eff_cm2_g << G4endl;
   G4cout << " mu_en [1/mm]          : " << mu_en_per_mm << G4endl;
-  G4cout << " mu_en/rho (raw) [cm2/g] : " << mu_en_raw_cm2_g << G4endl;
+  G4cout << " mu_en/rho (raw foil) [cm2/g] : " << mu_en_raw_cm2_g << G4endl;
+  G4cout << " mu_en/rho (raw slab) [cm2/g] : " << mu_en_raw_slab_cm2_g << G4endl;
   G4cout << " mu_en/rho (CPE) [cm2/g]: " << mu_en_cpe_cm2_g
          << " (Δ " << delta_mu_en_cpe_percent << " % vs NIST)" << G4endl;
-  G4cout << " Absorbed fraction     : " << absorbedFraction << G4endl;
+  G4cout << " Absorbed fraction (foil) : " << absorbedFraction << G4endl;
+  G4cout << " Absorbed fraction (slab) : " << absorbedFractionSlab << G4endl;
 
   if (mu_calc_cm2_g > 0.) {
-    const G4double deltaCalc = (mu_counts_cm2_g - mu_calc_cm2_g) / mu_calc_cm2_g * 100.0;
     G4cout << " [diag] mu/rho (trans vs G4 calc) : "
            << mu_counts_cm2_g << " vs " << mu_calc_cm2_g
-           << " (Δ = " << deltaCalc << " %)" << G4endl;
+           << " (Δ = " << delta_mu_counts_vs_calc_percent << " %)" << G4endl;
   }
   if (mu_tr_cm2_g > 0.) {
-    const G4double deltaEnergy = (mu_en_cm2_g - mu_tr_cm2_g) / mu_tr_cm2_g * 100.0;
     G4cout << " [diag] mu_en/rho vs mu_tr/rho   : "
            << mu_en_cm2_g << " vs " << mu_tr_cm2_g
-           << " (Δ = " << deltaEnergy << " %)" << G4endl;
+           << " (Δ = " << delta_mu_en_cpe_vs_mu_tr_percent << " %)" << G4endl;
   }
   if (hasReference) {
     G4cout << " [nist] mu/rho reference [cm2/g] : " << mu_ref_cm2_g
@@ -291,8 +388,12 @@ void RunAction::EndOfRunAction(const G4Run* run)
   row.energy_keV             = energy_keV;
   row.totalInjected          = injected;
   row.transmittedUncollided  = fDetectedUncollided;
+  row.transmittedScattered   = fDetectedScattered;
   row.transmittedTotal       = transmitted;
   row.T_counts               = transmissionCountsRaw;
+  row.T_counts_scattered     = transmissionScattered;
+  row.T_counts_clamped       = transmissionCounts;
+  row.clamp_flag             = clampFlag;
   row.mu_counts_per_mm       = mu_counts_per_mm;
   row.mu_counts_cm2_g        = mu_counts_cm2_g;
   row.mu_calc_cm2_g          = mu_calc_cm2_g;
@@ -308,17 +409,28 @@ void RunAction::EndOfRunAction(const G4Run* run)
   row.mu_en_cpe_per_mm       = mu_en_cpe_per_mm;
   row.mu_en_cpe_cm2_g        = mu_en_cpe_cm2_g;
   row.delta_mu_en_cpe_percent = delta_mu_en_cpe_percent;
+  row.delta_mu_counts_vs_calc_percent = delta_mu_counts_vs_calc_percent;
+  row.delta_mu_en_cpe_vs_mu_tr_percent = delta_mu_en_cpe_vs_mu_tr_percent;
   row.absorbedFraction       = absorbedFraction;
+  row.absorbedFractionSlab   = absorbedFractionSlab;
   row.mu_en_per_mm           = mu_en_per_mm;
   row.mu_en_cm2_g            = mu_en_cm2_g;
   row.mu_en_raw_per_mm       = mu_en_raw_per_mm;
   row.mu_en_raw_cm2_g        = mu_en_raw_cm2_g;
+  row.mu_en_raw_slab_per_mm  = mu_en_raw_slab_per_mm;
+  row.mu_en_raw_slab_cm2_g   = mu_en_raw_slab_cm2_g;
   row.mu_eff_per_mm          = mu_eff_per_mm;
   row.mu_eff_cm2_g           = mu_eff_cm2_g;
   row.E_trans_unc_keV        = E_trans_unc_keV;
   row.E_trans_tot_keV        = E_trans_tot_keV;
-  row.E_abs_keV              = E_dep_total_keV;
+  row.E_abs_keV              = E_dep_foil_keV;
+  row.E_abs_backing_keV      = E_dep_backing_keV;
+  row.E_abs_slab_keV         = E_dep_slab_keV;
+  row.E_abs_other_keV        = E_dep_other_keV;
   row.T_energy_tot           = totalEnergyFraction;
+  row.T_energy_unc           = T_energy_unc;
+  row.backingThickness_um    = backing_thickness_um;
+  row.backingMaterial        = backingMaterialName;
 
   fSummaryRows.push_back(row);
 }
@@ -361,9 +473,19 @@ void RunAction::AddIncidentEnergy(G4double energy)
   fIncidentEnergy += energy;
 }
 
-void RunAction::AddDepositedEnergy(G4double energy)
+void RunAction::AddFoilDepositedEnergy(G4double energy)
 {
-  fDepositedEnergy += energy;
+  fDepositedEnergyFoil += energy;
+}
+
+void RunAction::AddBackingDepositedEnergy(G4double energy)
+{
+  fDepositedEnergyBacking += energy;
+}
+
+void RunAction::AddOtherDepositedEnergy(G4double energy)
+{
+  fDepositedEnergyOther += energy;
 }
 
 bool RunAction::EnsureReferenceDataLoaded() const
@@ -463,10 +585,25 @@ bool RunAction::InterpolateReference(G4double energy_keV,
   }
 
   const auto lower = upper - 1;
-  const G4double span = upper->energy_keV - lower->energy_keV;
-  const G4double fraction = (span > 0.) ? (energy_keV - lower->energy_keV) / span : 0.;
-  mu_cm2_g = lower->mu_cm2_g + fraction * (upper->mu_cm2_g - lower->mu_cm2_g);
-  mu_en_cm2_g = lower->mu_en_cm2_g + fraction * (upper->mu_en_cm2_g - lower->mu_en_cm2_g);
+  if (fUseLogInterpolation &&
+      lower->mu_cm2_g > 0. && upper->mu_cm2_g > 0. &&
+      lower->mu_en_cm2_g > 0. && upper->mu_en_cm2_g > 0.) {
+    const G4double logE = std::log(energy_keV);
+    const G4double logE1 = std::log(lower->energy_keV);
+    const G4double logE2 = std::log(upper->energy_keV);
+    const G4double weight = (logE2 - logE1) > 0. ? (logE - logE1) / (logE2 - logE1) : 0.;
+    const G4double logMu1 = std::log(lower->mu_cm2_g);
+    const G4double logMu2 = std::log(upper->mu_cm2_g);
+    const G4double logMuEn1 = std::log(lower->mu_en_cm2_g);
+    const G4double logMuEn2 = std::log(upper->mu_en_cm2_g);
+    mu_cm2_g = std::exp(logMu1 + weight * (logMu2 - logMu1));
+    mu_en_cm2_g = std::exp(logMuEn1 + weight * (logMuEn2 - logMuEn1));
+  } else {
+    const G4double span = upper->energy_keV - lower->energy_keV;
+    const G4double fraction = (span > 0.) ? (energy_keV - lower->energy_keV) / span : 0.;
+    mu_cm2_g = lower->mu_cm2_g + fraction * (upper->mu_cm2_g - lower->mu_cm2_g);
+    mu_en_cm2_g = lower->mu_en_cm2_g + fraction * (upper->mu_en_cm2_g - lower->mu_en_cm2_g);
+  }
   return true;
 }
 
@@ -477,7 +614,8 @@ G4double RunAction::ComputeComptonRetentionFraction(G4double energy) const
   }
 
   const G4double alpha = energy / electron_mass_c2;
-  const std::size_t steps = 512u; // Simpson integration steps (even number)
+  const G4int stepCount = std::max(2, fComptonIntegrationSteps);
+  const std::size_t steps = static_cast<std::size_t>((stepCount % 2 == 0) ? stepCount : stepCount + 1);
   const G4double dcos = 2.0 / static_cast<G4double>(steps);
   const G4double prefactor = twopi * classic_electr_radius * classic_electr_radius * 0.5;
 
@@ -525,14 +663,15 @@ void RunAction::WriteSummaryFile() const
   }
 
   if (!fileExists) {
-    out << "run_id,world_half_cm,thickness_nm,backing_thickness_um,density_g_cm3,E_keV,";
-    out << "N_injected,N_uncollided,N_trans_total,T_counts,";
+    out << "run_id,world_half_cm,thickness_nm,backing_thickness_um,backing_material,density_g_cm3,E_keV,";
+    out << "N_injected,N_uncollided,N_scattered,N_trans_total,T_counts,T_counts_scattered,T_counts_clamped,clamp_flag,";
     out << "mu_counts_per_mm,mu_counts_cm2_g,mu_calc_per_mm,mu_calc_cm2_g,";
     out << "mu_tr_per_mm,mu_tr_cm2_g,mu_ref_cm2_g,mu_en_ref_cm2_g,";
     out << "delta_mu_percent,delta_mu_en_percent,sigma_T_counts,sigma_mu_counts_cm2_g,";
-    out << "mu_en_cpe_per_mm,mu_en_cpe_cm2_g,delta_mu_en_cpe_percent,";
-    out << "absorbed_fraction,mu_en_per_mm,mu_en_cm2_g,mu_en_raw_per_mm,mu_en_raw_cm2_g,mu_eff_per_mm,mu_eff_cm2_g,";
-    out << "E_trans_unc_keV,E_trans_tot_keV,E_abs_keV,T_energy_tot" << '\n';
+    out << "mu_en_cpe_per_mm,mu_en_cpe_cm2_g,delta_mu_en_cpe_percent,delta_mu_counts_vs_mu_calc_percent,delta_mu_en_cpe_vs_mu_tr_percent,";
+    out << "absorbed_fraction,absorbed_fraction_slab,mu_en_per_mm,mu_en_cm2_g,mu_en_raw_per_mm,mu_en_raw_cm2_g,";
+    out << "mu_en_raw_slab_per_mm,mu_en_raw_slab_cm2_g,mu_eff_per_mm,mu_eff_cm2_g,";
+    out << "E_trans_unc_keV,E_trans_tot_keV,E_abs_keV,E_abs_backing_keV,E_abs_slab_keV,E_abs_other_keV,T_energy_unc,T_energy_tot" << '\n';
   }
 
   out.setf(std::ios::scientific);
@@ -543,12 +682,17 @@ void RunAction::WriteSummaryFile() const
         << row.worldHalf_cm << ','
         << row.thickness_nm << ','
         << row.backingThickness_um << ','
+        << row.backingMaterial << ','
         << row.density_g_cm3 << ','
         << row.energy_keV << ','
         << row.totalInjected << ','
         << row.transmittedUncollided << ','
+        << row.transmittedScattered << ','
         << row.transmittedTotal << ','
         << row.T_counts << ','
+        << row.T_counts_scattered << ','
+        << row.T_counts_clamped << ','
+        << row.clamp_flag << ','
         << row.mu_counts_per_mm << ','
         << row.mu_counts_cm2_g << ','
         << row.mu_calc_per_mm << ','
@@ -564,16 +708,25 @@ void RunAction::WriteSummaryFile() const
         << row.mu_en_cpe_per_mm << ','
         << row.mu_en_cpe_cm2_g << ','
         << row.delta_mu_en_cpe_percent << ','
+        << row.delta_mu_counts_vs_calc_percent << ','
+        << row.delta_mu_en_cpe_vs_mu_tr_percent << ','
         << row.absorbedFraction << ','
+        << row.absorbedFractionSlab << ','
         << row.mu_en_per_mm << ','
         << row.mu_en_cm2_g << ','
         << row.mu_en_raw_per_mm << ','
         << row.mu_en_raw_cm2_g << ','
+        << row.mu_en_raw_slab_per_mm << ','
+        << row.mu_en_raw_slab_cm2_g << ','
         << row.mu_eff_per_mm << ','
         << row.mu_eff_cm2_g << ','
         << row.E_trans_unc_keV << ','
         << row.E_trans_tot_keV << ','
         << row.E_abs_keV << ','
+        << row.E_abs_backing_keV << ','
+        << row.E_abs_slab_keV << ','
+        << row.E_abs_other_keV << ','
+        << row.T_energy_unc << ','
         << row.T_energy_tot << '\n';
   }
 }

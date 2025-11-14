@@ -1,3 +1,5 @@
+# Master initialization macro. Sets the deterministic RNG state, base geometry,
+# and GPS beam definition shared by all scan macros so benchmarking stays reproducible.
 /control/verbose 1
 /run/verbose 1
 

@@ -1,5 +1,7 @@
 /control/macroPath mac
 
+# Run the core benchmark twice so foil-only and backed data land in the same CSV
+# and share the exact same RNG stream for percent-level comparisons.
 # Foil-only benchmark pass (backing disabled)
 /control/alias backingThickness_um 0
 /control/execute benchmark_core.mac

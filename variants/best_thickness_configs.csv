@@ -1,0 +1,3 @@
+world_half_cm,thickness_nm,backing_thickness_um,energies,rms_delta_mu_percent,rms_delta_mu_en_percent,score,E_min,E_max,rows,rows_clamped
+100.0,750000.0,0.0,1,0.15534496837,0.15534496837,0.15534496837,1000.0,1000.0,1,0
+100.0,750000.0,50.0,1,0.29317570879,0.29317570879,0.29317570879,1000.0,1000.0,1,0

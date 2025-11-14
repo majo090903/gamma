@@ -78,17 +78,23 @@ void SteppingAction::UserSteppingAction(const G4Step* step)
   if (!preVolume || !postVolume) {
     return;
   }
+  const auto preName = preVolume->GetName();
 
   const auto edep = step->GetTotalEnergyDeposit();
-  if (edep > 0. && preVolume->GetName() == "Foil") {
-    fRunAction->AddDepositedEnergy(edep);
+  if (edep > 0.) {
+    if (preName == "Foil") {
+      fRunAction->AddFoilDepositedEnergy(edep);
+    } else if (preName == "Backing") {
+      fRunAction->AddBackingDepositedEnergy(edep);
+    } else {
+      fRunAction->AddOtherDepositedEnergy(edep);
+    }
   }
 
   if (prePoint->GetStepStatus() != fGeomBoundary || postPoint->GetStepStatus() != fGeomBoundary) {
     return;
   }
 
-  const auto preName = preVolume->GetName();
   const auto postName = postVolume->GetName();
   const G4bool fromFoilToBacking = (preName == "Foil" && postName == "Backing");
   const G4bool fromFoilToWorld   = (preName == "Foil" && postName == "World");

@@ -1,3 +1,5 @@
+# Executes the combined low- and mid-energy tungsten grid (1 keV – 100 MeV).
+# The values follow a quasi-log spacing so residual plots cover edges and plateaus.
 /random/setSeeds 123456 789012
 
 /control/alias E 1

@@ -10,6 +10,9 @@
 | `basic/` | 순수 박막 벤치마크 | 진공 속 단일 텅스텐 박막 | 결정적 시드, CPE 보정 μ<sub>en</sub>/ρ, 플로팅/리포트 스크립트 |
 | `variants/` | 백킹 조절 기능이 있는 확장형 벤치마크 | 박막 + 선택적 텅스텐 백킹 | `/det/setBackingThickness`, 박막/백킹 비교 매크로, CSV에 백킹 두께 기록 |
 
+> **발표 준비 팁 (KOR)**  
+> 이번 업데이트에서는 `variants/` 폴더를 중심으로 Foil-only/백킹 조합 전체를 다시 돌리고, 발표용 플롯과 CSV를 모두 정리했습니다. 10분 내외의 발표나 PPT 제작이 필요하다면 최종 산출물(플롯, 오버레이, 최적 두께 표 등)이 `variants/README.md`와 `variants/plots_variants/` 아래에 정리되어 있으니, 먼저 `variants/` 하위 문서를 참고해 주세요.
+
 공통 사항:
 - HybridEmPhysics (Option4) 물리 리스트 사용.
 -,CSV 스키마 및 `plot_coefficients.py`/`generate_nist_error.py` 워크플로 공유.

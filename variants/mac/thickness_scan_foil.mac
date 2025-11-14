@@ -1,0 +1,141 @@
+/control/macroPath mac
+
+# Foil-only scan: identical phase space to thickness_scan.mac but with the
+# downstream backing disabled so μ_en(raw) captures true thin-foil behavior.
+
+/control/execute init.mac
+/det/setBackingThickness 0 um
+/run/reinitializeGeometry
+
+/random/setSeeds 123456 789012
+/control/alias nPrimaries 200000
+
+# -----------------------------------------------------------------------------
+# World half-length: 50 cm (no backing)
+# -----------------------------------------------------------------------------
+
+/det/setWorldHalf 50 cm
+/run/reinitializeGeometry
+/det/setBackingThickness 0 um
+/run/reinitializeGeometry
+
+/random/setSeeds 123456 789012
+/det/setWThickness 100 nm
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+/random/setSeeds 123456 789012
+/det/setWThickness 150 nm
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+/random/setSeeds 123456 789012
+/det/setWThickness 250 nm
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+/random/setSeeds 123456 789012
+/det/setWThickness 500 nm
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+/random/setSeeds 123456 789012
+/det/setWThickness 1 um
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+/random/setSeeds 123456 789012
+/det/setWThickness 1.5 um
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+/random/setSeeds 123456 789012
+/det/setWThickness 2 um
+/run/reinitializeGeometry
+/control/alias nPrimaries 100000
+/control/execute energy_full.mac
+
+/random/setSeeds 123456 789012
+/det/setWThickness 5 um
+/run/reinitializeGeometry
+/control/alias nPrimaries 1000000
+/control/execute energy_full.mac
+
+/random/setSeeds 123456 789012
+/det/setWThickness 10 um
+/run/reinitializeGeometry
+/control/alias nPrimaries 1000000
+/control/execute energy_high.mac
+
+/control/alias nPrimaries 200000
+
+# -----------------------------------------------------------------------------
+# World half-length: 100 cm (no backing)
+# -----------------------------------------------------------------------------
+
+/det/setWorldHalf 100 cm
+/run/reinitializeGeometry
+/det/setBackingThickness 0 um
+/run/reinitializeGeometry
+
+/random/setSeeds 123456 789012
+/det/setWThickness 100 nm
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+/random/setSeeds 123456 789012
+/det/setWThickness 150 nm
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+/random/setSeeds 123456 789012
+/det/setWThickness 250 nm
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+/random/setSeeds 123456 789012
+/det/setWThickness 500 nm
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+/random/setSeeds 123456 789012
+/det/setWThickness 1 um
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+/random/setSeeds 123456 789012
+/det/setWThickness 1.5 um
+/run/reinitializeGeometry
+/control/alias nPrimaries 200000
+/control/execute energy_full.mac
+
+/random/setSeeds 123456 789012
+/det/setWThickness 2 um
+/run/reinitializeGeometry
+/control/alias nPrimaries 100000
+/control/execute energy_full.mac
+
+/random/setSeeds 123456 789012
+/det/setWThickness 5 um
+/run/reinitializeGeometry
+/control/alias nPrimaries 1000000
+/control/execute energy_full.mac
+
+/random/setSeeds 123456 789012
+/det/setWThickness 10 um
+/run/reinitializeGeometry
+/control/alias nPrimaries 1000000
+/control/execute energy_high.mac
+
+/control/alias nPrimaries 200000

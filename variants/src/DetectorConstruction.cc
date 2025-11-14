@@ -58,6 +58,7 @@ DetectorConstruction::DetectorConstruction()
     fBackingPhysical(nullptr),
     fMessenger(nullptr),
     fFoilMaterial(nullptr),
+    fBackingMaterial(nullptr),
     fVacuumMaterial(nullptr),
     fWorldHalfLength(5.0 * cm),
     fFoilThickness(250.0 * nm),
@@ -76,6 +77,7 @@ void DetectorConstruction::DefineMaterials()
 {
   auto* nist = G4NistManager::Instance();
   fFoilMaterial = nist->FindOrBuildMaterial("G4_W");
+  fBackingMaterial = fFoilMaterial;
   fVacuumMaterial = nist->FindOrBuildMaterial("G4_Galactic");
 }
 
@@ -138,6 +140,40 @@ void DetectorConstruction::SetBackingThickness(G4double value)
   UpdateGeometry();
 }
 
+void DetectorConstruction::SetBackingMaterial(const G4String& name)
+{
+  if (name.empty()) {
+    G4cout << "[DetectorConstruction] Ignoring empty backing material request." << G4endl;
+    return;
+  }
+
+  auto* material = G4Material::GetMaterial(name, false);
+  if (!material) {
+    auto* nist = G4NistManager::Instance();
+    material = nist->FindOrBuildMaterial(name, false);
+  }
+
+  if (!material) {
+    G4cout << "[DetectorConstruction] Backing material '" << name << "' not found." << G4endl;
+    return;
+  }
+
+  fBackingMaterial = material;
+  G4cout << "[DetectorConstruction] Backing material set to " << material->GetName() << G4endl;
+  UpdateGeometry();
+}
+
+G4String DetectorConstruction::GetBackingMaterialName() const
+{
+  if (fBackingMaterial) {
+    return fBackingMaterial->GetName();
+  }
+  if (fFoilMaterial) {
+    return fFoilMaterial->GetName();
+  }
+  return "";
+}
+
 void DetectorConstruction::UpdateGeometry()
 {
   if (auto* runManager = G4RunManager::GetRunManager()) {
@@ -161,6 +197,28 @@ void DetectorConstruction::BuildFoilRegion(G4LogicalVolume* foilLogical)
   cuts->SetProductionCut(cutValue, idxG4PositronCut);
   region->SetProductionCuts(cuts);
   region->AddRootLogicalVolume(foilLogical);
+}
+
+void DetectorConstruction::BuildBackingRegion(G4LogicalVolume* backingLogical)
+{
+  if (!backingLogical) {
+    return;
+  }
+
+  auto* regionStore = G4RegionStore::GetInstance();
+  if (auto* existing = regionStore->GetRegion("BackingRegion", false)) {
+    regionStore->DeRegister(existing);
+    delete existing;
+  }
+
+  auto* region = new G4Region("BackingRegion");
+  auto* cuts = new G4ProductionCuts();
+  const G4double cutValue = 20.0 * nm;
+  cuts->SetProductionCut(cutValue, idxG4GammaCut);
+  cuts->SetProductionCut(cutValue, idxG4ElectronCut);
+  cuts->SetProductionCut(cutValue, idxG4PositronCut);
+  region->SetProductionCuts(cuts);
+  region->AddRootLogicalVolume(backingLogical);
 }
 
 G4VPhysicalVolume* DetectorConstruction::ConstructVolumes()
@@ -193,7 +251,8 @@ G4VPhysicalVolume* DetectorConstruction::ConstructVolumes()
 
   if (fBackingThickness > 0.) {
     fBackingSolid = new G4Box("Backing", foilHalfXY, foilHalfXY, 0.5 * fBackingThickness);
-    fBackingLogical = new G4LogicalVolume(fBackingSolid, fFoilMaterial, "Backing");
+    auto* backingMaterial = fBackingMaterial ? fBackingMaterial : fFoilMaterial;
+    fBackingLogical = new G4LogicalVolume(fBackingSolid, backingMaterial, "Backing");
     const G4double zPlacement = 0.5 * (fFoilThickness + fBackingThickness);
     fBackingPhysical = new G4PVPlacement(nullptr,
                                          G4ThreeVector(0., 0., zPlacement),
@@ -209,6 +268,7 @@ G4VPhysicalVolume* DetectorConstruction::ConstructVolumes()
   }
 
   BuildFoilRegion(fFoilLogical);
+  BuildBackingRegion(fBackingLogical);
 
   auto* worldVis = new G4VisAttributes();
   worldVis->SetVisibility(false);
@@ -228,6 +288,10 @@ G4VPhysicalVolume* DetectorConstruction::ConstructVolumes()
   G4cout << " World half-length : " << G4BestUnit(fWorldHalfLength, "Length") << G4endl;
   G4cout << " Foil thickness    : " << G4BestUnit(fFoilThickness, "Length") << G4endl;
   G4cout << " Foil material     : " << fFoilMaterial->GetName() << G4endl;
+  G4cout << " Backing thickness : " << G4BestUnit(fBackingThickness, "Length") << G4endl;
+  if (fBackingLogical && fBackingLogical->GetMaterial()) {
+    G4cout << " Backing material  : " << fBackingLogical->GetMaterial()->GetName() << G4endl;
+  }
   G4cout << "------------------------------------------------------------" << G4endl;
   G4cout << "(Info) e-/e+ lines in the following 'Table of registered couples' report"
             " secondary transport thresholds, not additional primary beams." << G4endl;

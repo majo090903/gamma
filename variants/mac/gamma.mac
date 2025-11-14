@@ -1,4 +1,6 @@
 
+# Smoke-test macro for a single 356.5 keV gamma line (Ba-133) with a narrow beam.
+# Useful to sanity-check CSV wiring/plotting without running the full benchmark grids.
 /control/verbose 2
 /run/verbose 2
 

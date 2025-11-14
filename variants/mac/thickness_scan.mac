@@ -1,7 +1,8 @@
 /control/macroPath mac
 
-# Master macro for non-interactive scans across world sizes, foil thicknesses,
-# and the combined tungsten energy grid.
+# Master macro for non-interactive surveys of (world, thickness, energy).  Use
+# this to populate plots/errors with a large phase space before running the
+# overlay/optimization scripts.
 
 /control/execute init.mac
 

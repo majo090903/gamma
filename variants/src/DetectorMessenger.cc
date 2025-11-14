@@ -34,7 +34,8 @@ DetectorMessenger::DetectorMessenger(DetectorConstruction* detector)
     fRootDir(nullptr),
     fSetupDir(nullptr),
     fFoilThicknessCmd(nullptr),
-    fWorldHalfCmd(nullptr)
+    fWorldHalfCmd(nullptr),
+    fBackingMaterialCmd(nullptr)
 {
   fRootDir = new G4UIdirectory("/det/");
   fRootDir->SetGuidance("Detector configuration commands");
@@ -65,6 +66,12 @@ DetectorMessenger::DetectorMessenger(DetectorConstruction* detector)
   fBackingThicknessCmd->SetUnitCategory("Length");
   fBackingThicknessCmd->SetDefaultUnit("mm");
   fBackingThicknessCmd->AvailableForStates(G4State_PreInit, G4State_Idle);
+
+  fBackingMaterialCmd =
+    new G4UIcmdWithAString("/det/setBackingMaterial", this);
+  fBackingMaterialCmd->SetGuidance("Set the G4 material name for the backing slab (default: G4_W).");
+  fBackingMaterialCmd->SetParameterName("Material", false);
+  fBackingMaterialCmd->AvailableForStates(G4State_PreInit, G4State_Idle);
 }
 
 DetectorMessenger::~DetectorMessenger()
@@ -72,6 +79,7 @@ DetectorMessenger::~DetectorMessenger()
   delete fFoilThicknessCmd;
   delete fWorldHalfCmd;
   delete fBackingThicknessCmd;
+  delete fBackingMaterialCmd;
   delete fSetupDir;
   delete fRootDir;
 }
@@ -84,5 +92,7 @@ void DetectorMessenger::SetNewValue(G4UIcommand* command, G4String newValue)
     fDetector->SetWorldHalfLength(fWorldHalfCmd->GetNewDoubleValue(newValue));
   } else if (command == fBackingThicknessCmd) {
     fDetector->SetBackingThickness(fBackingThicknessCmd->GetNewDoubleValue(newValue));
+  } else if (command == fBackingMaterialCmd) {
+    fDetector->SetBackingMaterial(newValue);
   }
 }

@@ -35,10 +35,11 @@
 
 #include "globals.hh"
 #include "G4UImessenger.hh"
+#include "G4UIdirectory.hh"
+#include "G4UIcmdWithADoubleAndUnit.hh"
+#include "G4UIcmdWithAString.hh"
 
 class DetectorConstruction;
-class G4UIdirectory;
-#include "G4UIcmdWithADoubleAndUnit.hh"
 
 class DetectorMessenger: public G4UImessenger
 {
@@ -57,5 +58,6 @@ private:
   G4UIcmdWithADoubleAndUnit* fFoilThicknessCmd;
   G4UIcmdWithADoubleAndUnit* fWorldHalfCmd;
   G4UIcmdWithADoubleAndUnit* fBackingThicknessCmd;
+  G4UIcmdWithAString*        fBackingMaterialCmd;
 };
 #endif

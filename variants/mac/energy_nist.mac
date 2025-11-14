@@ -1,3 +1,5 @@
+# Replay the 50 tungsten energies tabulated in NIST XCOM so transmission rows
+# can be merged directly with μ/ρ and μ_en/ρ reference points.
 /random/setSeeds 123456 789012
 
 /control/alias E 1

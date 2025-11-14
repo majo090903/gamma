@@ -1,0 +1,2 @@
+world_half_cm,thickness_nm,backing_thickness_um,E_keV,mu_counts_cm2_g,mu_ref_cm2_g,delta_mu_counts_cm2_g,delta_mu_counts_percent,mu_en_cpe_cm2_g,mu_en_ref_cm2_g,delta_mu_en_cpe_cm2_g,delta_mu_en_cpe_percent,mu_en_raw_cm2_g,delta_mu_en_raw_cm2_g,delta_mu_en_raw_percent,mu_eff_cm2_g
+100.0,250000.0,0.0,500.0,0.14012414438,0.1378,0.002324144380000004,1.686606952104502,0.075654835571,0.0744,0.001254835571000007,1.6866069502688268,0.00055273019668,-0.07384726980331999,-99.25708306897847,0.00055280391424

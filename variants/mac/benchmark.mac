@@ -1,2 +1,4 @@
+# Run the core benchmark once with a 50 um tungsten backing to produce the
+# baseline CPE-restored dataset used in overlay_best_thickness.py.
 /control/alias backingThickness_um 50
 /control/execute benchmark_core.mac

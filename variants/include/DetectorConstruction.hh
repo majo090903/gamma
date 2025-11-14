@@ -33,11 +33,12 @@
 #ifndef DetectorConstruction_H
 #define DetectorConstruction_H 1
 
-#include "globals.hh"
 #include "G4VUserDetectorConstruction.hh"
 #include "G4ThreeVector.hh"
 #include "G4VPhysicalVolume.hh"
 #include "G4Material.hh"
+#include "G4String.hh"
+#include "globals.hh"
 
 class G4Box;
 class G4VPhysicalVolume;
@@ -58,8 +59,12 @@ public:
   void SetFoilThickness(G4double value);
   void SetWorldHalfLength(G4double value);
   void SetBackingThickness(G4double value);
+  void SetBackingMaterial(const G4String& name);
 
   void UpdateGeometry();
+  G4Material* GetFoilMaterial() const { return fFoilMaterial; }
+  G4Material* GetBackingMaterial() const { return fBackingMaterial; }
+  G4String GetBackingMaterialName() const;
   G4Material* GetMaterial() { return fFoilMaterial; }
   G4double GetFoilThickness() const { return fFoilThickness; }
   G4double GetWorldHalfLength() const { return fWorldHalfLength; }
@@ -70,6 +75,7 @@ private:
   void DefineMaterials();
   G4VPhysicalVolume* ConstructVolumes();
   void BuildFoilRegion(G4LogicalVolume* foilLogical);
+  void BuildBackingRegion(G4LogicalVolume* backingLogical);
 
   G4Box*             fWorldSolid;
   G4LogicalVolume*   fWorldLogical;
@@ -86,6 +92,7 @@ private:
   DetectorMessenger* fMessenger;
 
   G4Material*        fFoilMaterial;
+  G4Material*        fBackingMaterial;
   G4Material*        fVacuumMaterial;
 
   G4double           fWorldHalfLength;

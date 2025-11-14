@@ -1,3 +1,4 @@
+# Historical alias; identical to energy_1000keV.mac, preserved for scripts.
 /control/execute init.mac
 
 /det/setWorldHalf 50 cm

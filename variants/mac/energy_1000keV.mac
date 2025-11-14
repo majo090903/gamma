@@ -1,3 +1,4 @@
+# Standalone helper for a 1 MeV monoenergetic beam against a 1 um foil.
 /control/execute init.mac
 
 /det/setWorldHalf 50 cm
