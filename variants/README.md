@@ -31,6 +31,201 @@ variants/
 - `best_thickness_configs.csv` + `optimized_thicknesses.csv` <== 발표 추천: “어떤 조합이 가장 정확했는가”를 수치로 설명할 때 사용합니다.
 - `coverage_report.csv`와 `thickness_accuracy_rankings.csv`: 러닝이 얼마나 광범위했는지, 평균적으로 어느 조합이 가장 NIST에 가까웠는지 부록 슬라이드로 넣을 수 있습니다.
 
+이거 발표에 쓰면 좋을 것 같다고 생각해요!
+
+
+
+이거 발표에 쓰면 좋을 것 같다고 생각해요!
+
+## 복합 최적 두께 오버레이 – 물리적 해석 (KR)
+
+### 1. 오버레이의 구성 방법
+
+*복합 최적 두께(overall best-thickness) 오버레이*는 다음 절차로 작성된다.
+
+* 각 광자 에너지 (E) 에 대해 다음 매개변수 조합을 스캔한다.
+
+  * 포일 두께 (t_{\text{foil}}) (nm),
+  * 백킹 두께 (t_{\text{back}}) (µm),
+  * 월드 크기.
+* 각 조합마다 시뮬레이션 결과와 NIST 표 사이의 차이를
+  [
+  \text{score}(E,t) = w_{\mu}|\Delta \mu| + w_{\mu_{\mathrm{en}}}|\Delta \mu_{\mathrm{en}}|
+  ]
+  로 정의한다.
+* 같은 에너지에서 score가 가장 작은 조합 하나만을 선택하여 플롯에 표시한다.
+
+플롯에서의 기호는 다음과 같다.
+
+* **원(●)**: **포일 내부 침적 에너지만**을 사용하여 계산된 양
+  (백킹이 없는 얇은 포일 μ_{\mathrm{en}}).
+* **사각형(□)**: **포일 + 백킹 전체**를 사용한 양
+
+  * 비충돌(primary) 투과로부터 얻은 μ/ρ,
+  * CPE 가정 하에서의 μ_{\mathrm{en}}/ρ (μ × NIST μ_{\mathrm{en}}/μ 또는 μ_{\mathrm{tr}}).
+* **컬러바**: 해당 에너지에서 선택된 **포일 두께(nm)**
+  (어두운 색 = 얇은 포일, 밝은 색 = 두꺼운 포일).
+
+이 오버레이는 “에너지별로 두께와 백킹을 최적으로 선택했을 때 Geant4 결과가 NIST μ/ρ, μ_{\mathrm{en}}/ρ를 어느 정도까지 재현할 수 있는가?”를 정량적으로 보여준다.
+
+---
+
+### 2. 전하입자 평형(CPE)
+
+**전하입자 평형(CPE)** 은 측정 영역에서
+
+* 전자·양전자 등 전하입자가 그 영역으로 들어올 때 가져오는 에너지와
+* 그 영역을 빠져나갈 때 들고 나가는 에너지
+
+가 서로 거의 같아지는 상태를 의미한다. CPE가 성립하면, 광자가 전하입자에 전달한 에너지는 평균적으로 모두 **그 주변에 국소적으로 침적되는 것**으로 취급할 수 있다. NIST의 에너지 흡수 계수 (\mu_{\mathrm{en}}/\rho) 는 이러한 **무한하고 균질한 매질에서 CPE가 성립한다고 가정**하여 정의된다.
+
+반면, 얇은 포일에서는 전자가 포일을 벗어나기 쉬우므로 CPE가 깨지고, 포일 내부 침적 에너지로부터 계산한 (\mu_{\mathrm{en}}/\rho) 는 항상 NIST 값보다 작게 나타난다.
+
+---
+
+### 3. 두께의 역할: 감쇠와 전자 범위의 절충
+
+NIST의 (\mu/\rho), (\mu_{\mathrm{en}}/\rho) 는 **무한 슬랩**을 가정하지만, 본 시뮬레이션에서는 유한 두께 포일(및 백킹)을 사용한다. NIST 조건에 가깝게 만들기 위해서는 두 가지 요구 조건을 동시에 만족해야 한다.
+
+1. **CPE 근사**
+   포일 + 백킹의 전체 두께가 해당 에너지에서 전자(또는 양전자)의 CSDA range보다 충분히 커야 대부분의 전하입자가 재료 안에서 멈춘다.
+
+2. **투과값의 수치적 안정성**
+   비충돌 투과도 (T) 로부터
+   [
+   \mu = -\frac{\ln T}{t}
+   ]
+   를 사용해 μ를 추출하므로, (T) 가 0이나 1에 너무 가깝지 않아야 한다. 그렇지 않으면 작은統計 변동이 μ에 큰 오차를 유발한다.
+
+이 조건들은 **광학 두께**
+[
+\tau = (\mu/\rho),\rho,t
+]
+로 요약할 수 있으며, 실제 계산에서는 (\tau \approx 0.1\text{–}5) 정도의 범위가 감쇠와 통계 안정성 사이의 균형을 잘 이룬다.
+
+복합 최적 두께 곡선은 에너지에 따른 이러한 절충 조건이 가장 잘 만족되는 두께 조합들의 집합이라고 해석할 수 있다.
+
+---
+
+### 4. 저에너지 영역 (< 약 20 keV)
+
+**상호작용 특성**
+
+* 광자 감쇠는 거의 전적으로 광전효과에 의해 일어나며, (\mu/\rho) 값이 매우 크다.
+* 텅스텐에서 광자의 평균 자유 경로는 1 µm보다 훨씬 짧다.
+
+**전자 범위**
+
+* 광전전자와 오제 전자의 범위는 수십 nm 수준이다.
+* 수백 nm 수준의 포일만으로도 전자 궤적이 거의 모두 포일 안에 포함된다.
+
+**결과**
+
+* 포일 단독으로도 CPE가 잘 성립한다.
+* 너무 두껍지 않은 한, 매우 얇은 포일에서도 충분한 감쇠가 발생한다.
+* 전자들이 포일을 거의 벗어나지 않으므로 백킹의 영향은 미미하다.
+
+따라서 이 구간에서는
+
+* 포일-전용 (\mu_{\mathrm{en,raw}}/\rho) 가 이미 NIST (\mu_{\mathrm{en}}/\rho) 와 잘 일치하며,
+* 그래프 상에서도 어두운 색(얇은 포일)의 마커들이 NIST 곡선 위에 거의 겹쳐 나타난다.
+
+---
+
+### 5. 중간 에너지 영역 (약 20–300 keV)
+
+**상호작용 특성**
+
+* 콤프턴 산란이 우세하며, 에너지가 증가함에 따라 (\mu/\rho) 는 감소한다.
+
+**전자 범위**
+
+* 콤프턴 전자의 범위는 수백 nm에서 수십 µm까지 증가한다.
+* 얇은 포일에서는 상당수 전자가 포일을 통과하여 진공 또는 백킹으로 빠져나간다.
+
+**결과**
+
+* 포일만을 스코어링하는 경우 CPE가 성립하지 않으며, 국소 침적 에너지는 실제 광자-전자 에너지 전달량보다 작다.
+  → (\mu_{\mathrm{en,raw}}/\rho) 가 NIST 값보다 작게 편향된다.
+* 포일 뒤에 **백킹 slab** 를 두면 빠져나간 전자들이 그 안에서 멈추게 되어, 전체 slab가 무한 매질에 더 가까운 거동을 보인다.
+* 그러나 포일을 지나치게 두껍게 만들면 (T) 가 매우 작아져 μ 추출의 통계적 안정성이 떨어진다.
+
+이 에너지 범위에서 score를 최소화하는 조합은 보통
+
+* **중간 정도 두께의 포일**과
+* **유의미한 두께의 백킹**
+
+을 함께 사용하는 경우이며, 플롯에서는 중간 색깔의 사각형 마커들로 나타난다.
+
+---
+
+### 6. 고에너지 영역 (300 keV – 수 MeV)
+
+**상호작용 특성**
+
+* (\mu/\rho) 가 급격히 감소한다.
+* 수 MeV까지는 콤프턴 산란이 주를 이루고, 그 이상에서는 전자쌍 생성이 기여한다.
+
+**전자·양전자 범위**
+
+* 2차 전자·양전자의 CSDA range는 수백 µm에서 수 mm 수준까지 증가한다.
+
+**결과**
+
+* 얇은 포일은 거의 투명해져 (T \approx 1) 이 되며, 이때 μ 추정치는 수치적으로 불안정하다.
+* 전하입자의 대부분이 포일을 빠져나가므로 포일-전용 (\mu_{\mathrm{en,raw}}/\rho) 는 NIST (\mu_{\mathrm{en}}/\rho) 보다 훨씬 작게 나온다.
+* NIST의 무한 매질 조건에 가깝게 만들기 위해서는 **포일과 백킹 모두 상당한 두께**를 가져야 한다.
+
+따라서 고에너지 영역에서 최적 조합은
+
+* **µm 스케일 이상의 포일**과
+* **두꺼운 백킹**
+
+으로 구성되며, 플롯 상에서는 밝은 색의 사각형 마커로 나타난다.
+
+---
+
+### 7. 에너지에 따른 포일-전용/포일+백킹 선택
+
+어떤 에너지에서 포일-전용(●)과 포일+백킹(□) 중 어느 쪽이 선택되는지는 전적으로 score
+[
+\text{score} = w_{\mu}|\Delta\mu| + w_{\mu_{\mathrm{en}}}|\Delta\mu_{\mathrm{en,CPE}}|
+]
+에 의해 결정된다.
+
+* **저에너지**에서는 포일만으로도 CPE가 성립하므로 포일-전용 데이터가 NIST 값과 매우 잘 일치한다. 이 경우 최적 행은 주로 **원(●)** 으로 표시된다.
+* **중·고에너지**에서는 전자 도피가 커서 포일-전용 (\mu_{\mathrm{en,raw}}/\rho) 가 크게 편향된다. 백킹을 포함하면 CPE 근사가 개선되어 μ와 (\mu_{\mathrm{en}}/\rho) 모두에서 오차가 줄어들며, 최적 조합은 보통 **사각형(□)** 으로 나타난다.
+
+이는 백킹의 물리적 역할(무한 매질 가정을 회복하기 위한 두께 확보)을 잘 반영하는 결과이다.
+
+---
+
+### 8. NIST 곡선과의 일치가 의미하는 것
+
+복합 최적 두께 곡선에 포함된 각 점은
+
+1. 투과도 (T) 가 0이나 1에 치우치지 않아 μ 추정이 통계적으로 안정하고,
+2. 포일 + 백킹 두께가 해당 에너지에서 전자·양전자 범위를 충분히 포함하여 CPE에 가까우며,
+3. NIST μ/ρ 정의와 동일한 좁은 빔(비충돌) 기하를 유지하는
+
+구성을 나타낸다.
+
+이 조건이 만족되는 경우, NIST와의 잔차는
+
+* 유한한 몬테카를로統計,
+* Geant4 전자기 모델과 XCOM 단면 사이의 미세한 차이,
+* 참조표 보간 방식
+
+에 주로 기인한다.
+
+복합 최적 두께 오버레이가 넓은 에너지 범위에서 NIST 값을 수 % 이내로 추종한다는 사실은,
+
+> 개별 두께에서 관측되는 큰 오차의 대부분이 지오메트리와 CPE 조건의 미충족 때문이며, Geant4 물리 모형 자체의 근본적인 문제 때문이 아님을 보여준다.
+
+따라서 이 오버레이는 특정 두께에서 NIST와 차이가 클 때, 그 원인이 **포일·백킹 두께 선택**에 있는지, 아니면 물리 리스트에 있는지를 구분하는 유용한 진단 도구로 활용될 수 있다.
+
+---
+
 ### 개요
 variants 빌드는 기본 라인을 확장해 박막 뒤에 텅스텐 백킹(backing) 층을 배치할 수 있도록 했고, 투과 추적 로직을 Foil→Backing→World 경계까지 확장했습니다. 모든 매크로는 `/random/setSeeds 123456 789012`로 난수를 고정하므로, 동일한 매크로를 반복 실행하면 CSV가 완전히 재현됩니다.
 
@@ -197,194 +392,33 @@ variants 빌드는 기본 라인을 확장해 박막 뒤에 텅스텐 백킹(bac
 
 ---
 
-## 복합 최적 두께 오버레이 – 물리적 해석 (KR)
+### 권장 실행 순서
+```bash
+rm -f transmission_summary.csv
+source /home/majo/Geant4/install/geant4-v11.3.2/bin/geant4.sh
+./build/attenuation mac/thickness_scan.mac
+./build/attenuation mac/benchmark_compare.mac
+./build/attenuation mac/nist_scan.mac
+python plot_coefficients.py --csv transmission_summary.csv --reference nist_reference.csv --output-dir plots_variants
+# 옵션: 두께 최적화 및 오버레이
+python overlay_best_thickness.py --csv transmission_summary.csv --reference nist_reference.csv --output overlay_best.csv --plot overlay_best.png
+python optimize_thickness.py --csv transmission_summary.csv --reference nist_reference.csv --macro-output mac/benchmark_auto.mac
+python generate_nist_error.py transmission_summary.csv nist_reference.csv plots_variants/nist_error_summary.csv
+# 선택: 품질 보증과 평균 성능 요약
+python validate_summary.py --csv transmission_summary.csv --reference nist_reference.csv --output coverage_report.csv
+python rank_thickness_accuracy.py --csv transmission_summary.csv --reference nist_reference.csv --output thickness_accuracy_rankings.csv --best-output best_thickness_configs.csv --copy-best-plots --plots-dir plots_variants --best-plots-dir plots_variants/best
+```
+이 과정을 통해 백킹을 포함한 구성이든, 백킹을 제거한 구성이든 동일한 NIST 에너지 집합에서 시뮬레이션 값을 추출하고 오차 테이블을 생성할 수 있습니다. `mac/thickness_scan.mac`이 모든 세계/두께 조합을 채우고, `mac/benchmark_compare.mac`과 `mac/nist_scan.mac`이 비교·참조용 런을 추가합니다. 플롯은 `plots_variants/foil_only|backed/` 아래에 정리되며, `plots_variants/best/`에는 RMS 기준으로 가장 NIST에 근접한 Foil-only/백킹 조합의 PNG·오차 CSV가 자동으로 복사됩니다. 최적 두께 곡선은 `overlay_best_thickness.png`/`overlay_best_thickness.csv`로 확인하고, `optimized_thicknesses.csv`·`mac/benchmark_auto.mac`을 이용해 동일 조건을 재실행할 수 있습니다. `plots_variants/nist_error_summary.csv`는 에너지별 최신 결과를 NIST 표와 1:1로 비교한 요약본입니다.
 
-### 1. 오버레이의 구성 방법
-
-*복합 최적 두께(overall best-thickness) 오버레이*는 다음 절차로 작성된다.
-
-* 각 광자 에너지 (E) 에 대해 다음 매개변수 조합을 스캔한다.
-
-  * 포일 두께 (t_{\text{foil}}) (nm),
-  * 백킹 두께 (t_{\text{back}}) (µm),
-  * 월드 크기.
-* 각 조합마다 시뮬레이션 결과와 NIST 표 사이의 차이를
-  [
-  \text{score}(E,t) = w_{\mu}|\Delta \mu| + w_{\mu_{\mathrm{en}}}|\Delta \mu_{\mathrm{en}}|
-  ]
-  로 정의한다.
-* 같은 에너지에서 score가 가장 작은 조합 하나만을 선택하여 플롯에 표시한다.
-
-플롯에서의 기호는 다음과 같다.
-
-* **원(●)**: **포일 내부 침적 에너지만**을 사용하여 계산된 양
-  (백킹이 없는 얇은 포일 μ_{\mathrm{en}}).
-* **사각형(□)**: **포일 + 백킹 전체**를 사용한 양
-
-  * 비충돌(primary) 투과로부터 얻은 μ/ρ,
-  * CPE 가정 하에서의 μ_{\mathrm{en}}/ρ (μ × NIST μ_{\mathrm{en}}/μ 또는 μ_{\mathrm{tr}}).
-* **컬러바**: 해당 에너지에서 선택된 **포일 두께(nm)**
-  (어두운 색 = 얇은 포일, 밝은 색 = 두꺼운 포일).
-
-이 오버레이는 “에너지별로 두께와 백킹을 최적으로 선택했을 때 Geant4 결과가 NIST μ/ρ, μ_{\mathrm{en}}/ρ를 어느 정도까지 재현할 수 있는가?”를 정량적으로 보여준다.
+### basic 빌드와의 차이
+- variants는 `/det/setBackingThickness` 및 `/det/setBackingMaterial` 명령을 통해 Foil 뒤에 원하는 재질/두께의 백킹을 둘 수 있으며, `SteppingAction`이 Foil→Backing→World 경계 각각에서 한 번만 투과를 기록합니다.
+- `TrackInfo`에 `TransmissionLogged` 플래그를 추가해 다중 영역을 통과하는 포톤을 중복 집계하지 않습니다.
+- `RunAction`은 포일/백킹/기타 영역의 에너지 침적을 분리해 μ_en/ρ(raw)와 μ_en/ρ(raw slab)를 모두 제공합니다.
+- 나머지 물리 리스트, 난수 시드, CSV 스키마, 플로팅 파이프라인은 기본 라인과 동일합니다.
 
 ---
 
-### 2. 전하입자 평형(CPE)
-
-**전하입자 평형(CPE)** 은 측정 영역에서
-
-* 전자·양전자 등 전하입자가 그 영역으로 들어올 때 가져오는 에너지와
-* 그 영역을 빠져나갈 때 들고 나가는 에너지
-
-가 서로 거의 같아지는 상태를 의미한다. CPE가 성립하면, 광자가 전하입자에 전달한 에너지는 평균적으로 모두 **그 주변에 국소적으로 침적되는 것**으로 취급할 수 있다. NIST의 에너지 흡수 계수 (\mu_{\mathrm{en}}/\rho) 는 이러한 **무한하고 균질한 매질에서 CPE가 성립한다고 가정**하여 정의된다.
-
-반면, 얇은 포일에서는 전자가 포일을 벗어나기 쉬우므로 CPE가 깨지고, 포일 내부 침적 에너지로부터 계산한 (\mu_{\mathrm{en}}/\rho) 는 항상 NIST 값보다 작게 나타난다.
-
----
-
-### 3. 두께의 역할: 감쇠와 전자 범위의 절충
-
-NIST의 (\mu/\rho), (\mu_{\mathrm{en}}/\rho) 는 **무한 슬랩**을 가정하지만, 본 시뮬레이션에서는 유한 두께 포일(및 백킹)을 사용한다. NIST 조건에 가깝게 만들기 위해서는 두 가지 요구 조건을 동시에 만족해야 한다.
-
-1. **CPE 근사**
-   포일 + 백킹의 전체 두께가 해당 에너지에서 전자(또는 양전자)의 CSDA range보다 충분히 커야 대부분의 전하입자가 재료 안에서 멈춘다.
-
-2. **투과값의 수치적 안정성**
-   비충돌 투과도 (T) 로부터
-   [
-   \mu = -\frac{\ln T}{t}
-   ]
-   를 사용해 μ를 추출하므로, (T) 가 0이나 1에 너무 가깝지 않아야 한다. 그렇지 않으면 작은統계 변동이 μ에 큰 오차를 유발한다.
-
-이 조건들은 **광학 두께**
-[
-\tau = (\mu/\rho),\rho,t
-]
-로 요약할 수 있으며, 실제 계산에서는 (\tau \approx 0.1\text{–}5) 정도의 범위가 감쇠와 통계 안정성 사이의 균형을 잘 이룬다.
-
-복합 최적 두께 곡선은 에너지에 따른 이러한 절충 조건이 가장 잘 만족되는 두께 조합들의 집합이라고 해석할 수 있다.
-
----
-
-### 4. 저에너지 영역 (< 약 20 keV)
-
-**상호작용 특성**
-
-* 광자 감쇠는 거의 전적으로 광전효과에 의해 일어나며, (\mu/\rho) 값이 매우 크다.
-* 텅스텐에서 광자의 평균 자유 경로는 1 µm보다 훨씬 짧다.
-
-**전자 범위**
-
-* 광전전자와 오제 전자의 범위는 수십 nm 수준이다.
-* 수백 nm 수준의 포일만으로도 전자 궤적이 거의 모두 포일 안에 포함된다.
-
-**결과**
-
-* 포일 단독으로도 CPE가 잘 성립한다.
-* 너무 두껍지 않은 한, 매우 얇은 포일에서도 충분한 감쇠가 발생한다.
-* 전자들이 포일을 거의 벗어나지 않으므로 백킹의 영향은 미미하다.
-
-따라서 이 구간에서는
-
-* 포일-전용 (\mu_{\mathrm{en,raw}}/\rho) 가 이미 NIST (\mu_{\mathrm{en}}/\rho) 와 잘 일치하며,
-* 그래프 상에서도 어두운 색(얇은 포일)의 마커들이 NIST 곡선 위에 거의 겹쳐 나타난다.
-
----
-
-### 5. 중간 에너지 영역 (약 20–300 keV)
-
-**상호작용 특성**
-
-* 콤프턴 산란이 우세하며, 에너지가 증가함에 따라 (\mu/\rho) 는 감소한다.
-
-**전자 범위**
-
-* 콤프턴 전자의 범위는 수백 nm에서 수십 µm까지 증가한다.
-* 얇은 포일에서는 상당수 전자가 포일을 통과하여 진공 또는 백킹으로 빠져나간다.
-
-**결과**
-
-* 포일만을 스코어링하는 경우 CPE가 성립하지 않으며, 국소 침적 에너지는 실제 광자-전자 에너지 전달량보다 작다.
-  → (\mu_{\mathrm{en,raw}}/\rho) 가 NIST 값보다 작게 편향된다.
-* 포일 뒤에 **백킹 slab** 를 두면 빠져나간 전자들이 그 안에서 멈추게 되어, 전체 slab가 무한 매질에 더 가까운 거동을 보인다.
-* 그러나 포일을 지나치게 두껍게 만들면 (T) 가 매우 작아져 μ 추출의 통계적 안정성이 떨어진다.
-
-이 에너지 범위에서 score를 최소화하는 조합은 보통
-
-* **중간 정도 두께의 포일**과
-* **유의미한 두께의 백킹**
-
-을 함께 사용하는 경우이며, 플롯에서는 중간 색깔의 사각형 마커들로 나타난다.
-
----
-
-### 6. 고에너지 영역 (300 keV – 수 MeV)
-
-**상호작용 특성**
-
-* (\mu/\rho) 가 급격히 감소한다.
-* 수 MeV까지는 콤프턴 산란이 주를 이루고, 그 이상에서는 전자쌍 생성이 기여한다.
-
-**전자·양전자 범위**
-
-* 2차 전자·양전자의 CSDA range는 수백 µm에서 수 mm 수준까지 증가한다.
-
-**결과**
-
-* 얇은 포일은 거의 투명해져 (T \approx 1) 이 되며, 이때 μ 추정치는 수치적으로 불안정하다.
-* 전하입자의 대부분이 포일을 빠져나가므로 포일-전용 (\mu_{\mathrm{en,raw}}/\rho) 는 NIST (\mu_{\mathrm{en}}/\rho) 보다 훨씬 작게 나온다.
-* NIST의 무한 매질 조건에 가깝게 만들기 위해서는 **포일과 백킹 모두 상당한 두께**를 가져야 한다.
-
-따라서 고에너지 영역에서 최적 조합은
-
-* **µm 스케일 이상의 포일**과
-* **두꺼운 백킹**
-
-으로 구성되며, 플롯 상에서는 밝은 색의 사각형 마커로 나타난다.
-
----
-
-### 7. 에너지에 따른 포일-전용/포일+백킹 선택
-
-어떤 에너지에서 포일-전용(●)과 포일+백킹(□) 중 어느 쪽이 선택되는지는 전적으로 score
-[
-\text{score} = w_{\mu}|\Delta\mu| + w_{\mu_{\mathrm{en}}}|\Delta\mu_{\mathrm{en,CPE}}|
-]
-에 의해 결정된다.
-
-* **저에너지**에서는 포일만으로도 CPE가 성립하므로 포일-전용 데이터가 NIST 값과 매우 잘 일치한다. 이 경우 최적 행은 주로 **원(●)** 으로 표시된다.
-* **중·고에너지**에서는 전자 도피가 커서 포일-전용 (\mu_{\mathrm{en,raw}}/\rho) 가 크게 편향된다. 백킹을 포함하면 CPE 근사가 개선되어 μ와 (\mu_{\mathrm{en}}/\rho) 모두에서 오차가 줄어들며, 최적 조합은 보통 **사각형(□)** 으로 나타난다.
-
-이는 백킹의 물리적 역할(무한 매질 가정을 회복하기 위한 두께 확보)을 잘 반영하는 결과이다.
-
----
-
-### 8. NIST 곡선과의 일치가 의미하는 것
-
-복합 최적 두께 곡선에 포함된 각 점은
-
-1. 투과도 (T) 가 0이나 1에 치우치지 않아 μ 추정이 통계적으로 안정하고,
-2. 포일 + 백킹 두께가 해당 에너지에서 전자·양전자 범위를 충분히 포함하여 CPE에 가까우며,
-3. NIST μ/ρ 정의와 동일한 좁은 빔(비충돌) 기하를 유지하는
-
-구성을 나타낸다.
-
-이 조건이 만족되는 경우, NIST와의 잔차는
-
-* 유한한 몬테카를로統計,
-* Geant4 전자기 모델과 XCOM 단면 사이의 미세한 차이,
-* 참조표 보간 방식
-
-에 주로 기인한다.
-
-복합 최적 두께 오버레이가 넓은 에너지 범위에서 NIST 값을 수 % 이내로 추종한다는 사실은,
-
-> 개별 두께에서 관측되는 큰 오차의 대부분이 지오메트리와 CPE 조건의 미충족 때문이며, Geant4 물리 모형 자체의 근본적인 문제 때문이 아님을 보여준다.
-
-따라서 이 오버레이는 특정 두께에서 NIST와 차이가 클 때, 그 원인이 **포일·백킹 두께 선택**에 있는지, 아니면 물리 리스트에 있는지를 구분하는 유용한 진단 도구로 활용될 수 있다.
-
----
+## English Version
 
 ## Composite best-thickness overlay – physical interpretation (EN)
 
@@ -576,34 +610,6 @@ The fact that the composite best-thickness overlay stays within a few percent of
 The overlay therefore serves as a useful diagnostic: if a particular experimental thickness gives poor agreement with NIST, but the composite curve at that energy is close to NIST, the discrepancy can be attributed to the chosen geometry (foil too thin, backing insufficient, or extreme transmission), rather than to the underlying cross sections.
 
 ---
-
-### 권장 실행 순서
-```bash
-rm -f transmission_summary.csv
-source /home/majo/Geant4/install/geant4-v11.3.2/bin/geant4.sh
-./build/attenuation mac/thickness_scan.mac
-./build/attenuation mac/benchmark_compare.mac
-./build/attenuation mac/nist_scan.mac
-python plot_coefficients.py --csv transmission_summary.csv --reference nist_reference.csv --output-dir plots_variants
-# 옵션: 두께 최적화 및 오버레이
-python overlay_best_thickness.py --csv transmission_summary.csv --reference nist_reference.csv --output overlay_best.csv --plot overlay_best.png
-python optimize_thickness.py --csv transmission_summary.csv --reference nist_reference.csv --macro-output mac/benchmark_auto.mac
-python generate_nist_error.py transmission_summary.csv nist_reference.csv plots_variants/nist_error_summary.csv
-# 선택: 품질 보증과 평균 성능 요약
-python validate_summary.py --csv transmission_summary.csv --reference nist_reference.csv --output coverage_report.csv
-python rank_thickness_accuracy.py --csv transmission_summary.csv --reference nist_reference.csv --output thickness_accuracy_rankings.csv --best-output best_thickness_configs.csv --copy-best-plots --plots-dir plots_variants --best-plots-dir plots_variants/best
-```
-이 과정을 통해 백킹을 포함한 구성이든, 백킹을 제거한 구성이든 동일한 NIST 에너지 집합에서 시뮬레이션 값을 추출하고 오차 테이블을 생성할 수 있습니다. `mac/thickness_scan.mac`이 모든 세계/두께 조합을 채우고, `mac/benchmark_compare.mac`과 `mac/nist_scan.mac`이 비교·참조용 런을 추가합니다. 플롯은 `plots_variants/foil_only|backed/` 아래에 정리되며, `plots_variants/best/`에는 RMS 기준으로 가장 NIST에 근접한 Foil-only/백킹 조합의 PNG·오차 CSV가 자동으로 복사됩니다. 최적 두께 곡선은 `overlay_best_thickness.png`/`overlay_best_thickness.csv`로 확인하고, `optimized_thicknesses.csv`·`mac/benchmark_auto.mac`을 이용해 동일 조건을 재실행할 수 있습니다. `plots_variants/nist_error_summary.csv`는 에너지별 최신 결과를 NIST 표와 1:1로 비교한 요약본입니다.
-
-### basic 빌드와의 차이
-- variants는 `/det/setBackingThickness` 및 `/det/setBackingMaterial` 명령을 통해 Foil 뒤에 원하는 재질/두께의 백킹을 둘 수 있으며, `SteppingAction`이 Foil→Backing→World 경계 각각에서 한 번만 투과를 기록합니다.
-- `TrackInfo`에 `TransmissionLogged` 플래그를 추가해 다중 영역을 통과하는 포톤을 중복 집계하지 않습니다.
-- `RunAction`은 포일/백킹/기타 영역의 에너지 침적을 분리해 μ_en/ρ(raw)와 μ_en/ρ(raw slab)를 모두 제공합니다.
-- 나머지 물리 리스트, 난수 시드, CSV 스키마, 플로팅 파이프라인은 기본 라인과 동일합니다.
-
----
-
-## English Version
 
 ### Folder Highlights
 ```
