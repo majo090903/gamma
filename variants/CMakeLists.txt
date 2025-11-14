@@ -49,8 +49,8 @@ set(attenuation_MACROS
 
 set(attenuation_SCRIPTS
   ${attenuation_MACROS}
-  plot_coefficients.py
-  generate_nist_error.py
+  scripts/plot_coefficients.py
+  scripts/generate_nist_error.py
   nist_reference.csv
   runMe.py simplerun.py
   )

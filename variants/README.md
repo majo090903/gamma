@@ -136,7 +136,7 @@ variants 빌드는 기본 라인을 확장해 박막 뒤에 텅스텐 백킹(bac
 
 ### 출력 파일과 CSV 열 설명
 `transmission_summary.csv`에는 다음과 같은 블록이 포함됩니다.
-- **지오메트리/재질**: `run_id`, `world_half_cm`, `thickness_nm`, `backing_thickness_um`, `backing_material`, `density_g_cm3`, `E_keV`
+- **지오메트리/재질**: `run_id`(Geant4 run 번호), `world_half_cm`(세계 반길이), `thickness_nm`(포일 두께), `backing_thickness_um`(백킹 두께), `backing_material`(재질 이름), `density_g_cm3`(포일 밀도), `E_keV`(입사 광자 에너지)
 - **전송 통계**: `N_injected`, `N_uncollided`, `N_scattered`, `N_trans_total`, `T_counts`, `T_counts_scattered`, `T_counts_clamped`, `clamp_flag`, `sigma_T_counts`
 - **감쇠 계수**: `mu_counts_per_mm`, `mu_counts_cm2_g`, `mu_calc_per_mm`, `mu_calc_cm2_g`, `mu_tr_per_mm`, `mu_tr_cm2_g`, `mu_eff_per_mm`, `mu_eff_cm2_g`
 - **에너지 흡수 계수**:
@@ -153,6 +153,10 @@ variants 빌드는 기본 라인을 확장해 박막 뒤에 텅스텐 백킹(bac
   - 두께별 로그-로그 그래프를 생성하며, 그래프 상단에는 시뮬레이션 곡선과 NIST 곡선/포인트가 함께 표시되고 하단에는 백분율 잔차 그래프가 추가됩니다.
   - `--show-raw-foil`, `--show-raw-slab` 플래그로 포일/슬랩 원시 μ_en/ρ 곡선을 동시에 볼 수 있습니다.
   - 참조 파일을 제공하면 `plots_variants/errors/`에 두께별 오차 표를 저장합니다.
+  - 그래프 읽는 법:
+    - 상단 패널: 굵은 실선이 시뮬레이션 μ/ρ (counts), 점선이 μ_en/ρ(CPE)/μ_eff/ρ입니다. 검은 원/사각 마커는 시뮬레이션 포인트, 빨간 원/마름모는 NIST 데이터를 의미합니다.
+    - 하단 패널: `Δμ`와 `Δμ_en`이 (시뮬레이션 − NIST)/NIST [%]로 계산되어 ±10% 범위에서 얼마나 오차가 줄어드는지를 보여 줍니다.
+    - x축은 keV, y축은 cm²/g 단위입니다. Foil-only vs 백킹 플롯을 비교하면 백킹이 μ_en_raw을 얼마나 보정해주는지 직관적으로 확인할 수 있습니다.
 - `generate_nist_error.py`는 최신 런과 참조 값을 결합한 표를 제공합니다.
 - `overlay_best_thickness.py --csv transmission_summary.csv --reference nist_reference.csv --output overlay_best.csv --plot overlay.png`
   - 각 에너지에서 `|Δμ|`와 `|Δμ_en|`의 가중 합을 최소화하는 두께·백킹 조합을 고르고, 최적 포인트를 색상/마커로 표시한 플롯을 생성합니다.
